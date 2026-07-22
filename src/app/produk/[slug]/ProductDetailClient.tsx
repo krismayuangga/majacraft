@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatRupiah } from "@/lib/data";
 import ProductCard from "@/components/marketplace/ProductCard";
+import ReviewSection from "@/components/marketplace/ReviewSection";
 
 export default function ProductDetailClient({ slug, serverProduct }: { slug: string; serverProduct?: unknown }) {
   // ─── ALL HOOKS MUST BE AT THE TOP (Rules of Hooks) ───────────────────────
@@ -534,10 +535,7 @@ export default function ProductDetailClient({ slug, serverProduct }: { slug: str
           </TabsContent>
 
           <TabsContent value="ulasan" className="pt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg font-medium">⭐ {product.rating}/5</p>
-              <p className="text-sm mt-1">Berdasarkan {product.reviews} ulasan</p>
-            </div>
+            <ReviewSection productId={product.id} />
           </TabsContent>
         </Tabs>
       </div>

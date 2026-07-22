@@ -345,20 +345,25 @@ model Address {
 // ─── REVIEW ───────────────────────────────────────────────────────────────
 
 model Review {
-  id         String   @id @default(cuid())
-  orderId    String
-  productId  String
-  userId     String
-  rating     Int
-  comment    String?
-  imageUrls  String[]
-  isVerified Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  order      Order    @relation(fields: [orderId], references: [id])
-  product    Product  @relation(fields: [productId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
+  id           String   @id @default(cuid())
+  orderId      String
+  productId    String
+  userId       String
+  rating       Int      // 1-5 stars
+  comment      String?
+  imageUrls    String[] // Array of image URLs
+  videoUrl     String?  // Single video URL
+  helpfulCount Int      @default(0)
+  isVerified   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  order        Order    @relation(fields: [orderId], references: [id])
+  product      Product  @relation(fields: [productId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
 
   @@unique([orderId, productId, userId])
+  @@index([productId, createdAt])
+  @@index([rating])
   @@map("reviews")
 }
 
