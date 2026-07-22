@@ -1,26 +1,256 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* MAJA Ancient-Tech — Light Mode — hex colors untuk kompatibilitas GPU Android */
+:root {
+  --background: #F9F7F3;
+  --foreground: #1C1510;
+  --card: #FFFFFF;
+  --card-foreground: #1C1510;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1510;
+  --primary: #B8922A;
+  --primary-foreground: #140E08;
+  --secondary: #F0EDE6;
+  --secondary-foreground: #3A3020;
+  --muted: #F0EDE6;
+  --muted-foreground: #786858;
+  --accent: #EDE0C4;
+  --accent-foreground: #1C1510;
+  --destructive: #DC2626;
+  --border: #DDD5C4;
+  --input: #E8E2D6;
+  --ring: #B8922A;
+  --chart-1: #B8922A;
+  --chart-2: #2E8B57;
+  --chart-3: #2B7BA8;
+  --chart-4: #C8A020;
+  --chart-5: #B84020;
+  --radius: 0.625rem;
+  --sidebar: #1C1510;
+  --sidebar-foreground: #E8DDD0;
+  --sidebar-primary: #B8922A;
+  --sidebar-primary-foreground: #140E08;
+  --sidebar-accent: #28211A;
+  --sidebar-accent-foreground: #E8DDD0;
+  --sidebar-border: rgba(255,255,255,0.12);
+  --sidebar-ring: #B8922A;
+
+  /* MAJA Custom */
+  --gold: #C9A84C;
+  --gold-light: #E8C96A;
+  --gold-dark: #A07830;
+  --stone-dark: #1C1A14;
+  --stone-mid: #2A2620;
+  --neon-green: #39FF6A;
+}
+
+/* MAJA Ancient-Tech — Dark Mode — hex colors untuk kompatibilitas GPU Android */
+.dark {
+  --background: #1C1814;
+  --foreground: #EDE8DE;
+  --card: #252018;
+  --card-foreground: #EDE8DE;
+  --popover: #252018;
+  --popover-foreground: #EDE8DE;
+  --primary: #C9A84C;
+  --primary-foreground: #140F0A;
+  --secondary: #2E2920;
+  --secondary-foreground: #EDE8DE;
+  --muted: #2E2920;
+  --muted-foreground: #8A7A62;
+  --accent: #332C1E;
+  --accent-foreground: #EDE8DE;
+  --destructive: #E05540;
+  --border: rgba(255,255,255,0.10);
+  --input: rgba(255,255,255,0.12);
+  --ring: #C9A84C;
+  --chart-1: #C9A84C;
+  --chart-2: #4CAF88;
+  --chart-3: #4C8CAF;
+  --chart-4: #D4A940;
+  --chart-5: #C0552A;
+  --sidebar: #161310;
+  --sidebar-foreground: #E8DDD0;
+  --sidebar-primary: #C9A84C;
+  --sidebar-primary-foreground: #140F0A;
+  --sidebar-accent: #28231A;
+  --sidebar-accent-foreground: #E8DDD0;
+  --sidebar-border: rgba(255,255,255,0.10);
+  --sidebar-ring: #C9A84C;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ===== MAJA ANCIENT-TECH UTILITIES ===== */
+@layer utilities {
+  /* Gold gradient text — pakai solid color di mobile, gradient di desktop */
+  .text-gold-gradient {
+    color: #C9A84C;
+  }
+  @media (min-width: 768px) {
+    .text-gold-gradient {
+      background: linear-gradient(135deg, #C9A84C 0%, #E8C96A 50%, #A07830 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+
+  /* Stone texture overlay */
+  .bg-stone-pattern {
+    background-color: #1C1A14;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(201,168,76,0.03) 2px,
+        rgba(201,168,76,0.03) 4px
+      );
+  }
+
+  /* Neon gold border glow */
+  .border-gold-glow {
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    box-shadow: 0 0 12px rgba(201, 168, 76, 0.15), inset 0 0 12px rgba(201, 168, 76, 0.05);
+  }
+
+  /* Batik circuit pattern overlay */
+  .bg-batik-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9A84C' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Product card hover */
+  .card-maja {
+    border: 1px solid rgba(201, 168, 76, 0.15);
+  }
+  @media (hover: hover) {
+    .card-maja:hover {
+      border-color: rgba(201, 168, 76, 0.5);
+    }
+  }
+
+  /* Badge Verified Phygital */
+  .badge-phygital {
+    background: #1C1A14;
+    border: 1px solid #C9A84C;
+    color: #E8C96A;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Gold button */
+  .btn-gold {
+    background: linear-gradient(135deg, #A07830 0%, #C9A84C 50%, #A07830 100%);
+    color: #1C1A14;
+    font-weight: 700;
+    border: none;
+    transition: all 0.3s ease;
+  }
+  .btn-gold:hover {
+    background: linear-gradient(135deg, #C9A84C 0%, #E8C96A 50%, #C9A84C 100%);
+    box-shadow: 0 4px 20px rgba(201, 168, 76, 0.4);
+  }
+
+  /* Hero section stone bg */
+  .hero-maja {
+    background:
+      linear-gradient(180deg, rgba(28,26,20,0.95) 0%, rgba(28,26,20,0.7) 100%),
+      url('/images/hero-bg.jpg') center/cover no-repeat;
+  }
+
+  /* Section divider ornament */
+  .ornament-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #C9A84C 30%, #E8C96A 50%, #C9A84C 70%, transparent 100%);
+  }
+
+  /* Scrollbar */
+  .scrollbar-gold::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-gold::-webkit-scrollbar-track { background: #1C1A14; }
+  .scrollbar-gold::-webkit-scrollbar-thumb { background: #C9A84C; border-radius: 2px; }
+
+  /* Safe area untuk iPhone bottom notch */
+  .safe-area-pb {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  /* Mobile tap highlight */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* TipTap rich text editor prose styles */
+  .prose h2 { @apply text-base font-bold text-foreground mt-3 mb-1; }
+  .prose h3 { @apply text-sm font-semibold text-foreground mt-2 mb-1; }
+  .prose p { @apply text-sm text-foreground mb-2 leading-relaxed; }
+  .prose ul { @apply list-disc pl-5 mb-2 space-y-0.5; }
+  .prose ol { @apply list-decimal pl-5 mb-2 space-y-0.5; }
+  .prose li { @apply text-sm text-foreground; }
+  .prose blockquote { @apply border-l-2 border-amber-600 pl-3 italic text-muted-foreground text-sm my-2; }
+  .prose strong { @apply font-bold text-foreground; }
+  .prose em { @apply italic; }
+  .prose u { @apply underline; }
+  .prose hr { @apply border-border my-3; }
+  .prose a { @apply text-amber-600 hover:text-amber-500 underline; }
+  .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); @apply text-muted-foreground pointer-events-none float-left h-0; }
 }

@@ -1,0 +1,559 @@
+// MAJA Marketplace — Prisma Schema v7
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum KycStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+enum EscrowStatus {
+  WAITING
+  LOCKED
+  RELEASING
+  RELEASED
+  REFUNDED
+}
+
+// ─── AUTH & USERS ─────────────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  emailVerified DateTime?
+  phone         String?
+  image         String?
+  password      String?
+  withdrawalPin String?   // bcrypt-hashed PIN 6 digit
+  role          Role       @default(BUYER)
+  status        UserStatus @default(ACTIVE)
+  kycStatus     KycStatus  @default(UNVERIFIED)
+  kycNik        String?
+  kycKtpUrl     String?
+  kycSelfieUrl  String?
+  kycVerifiedAt DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lastLoginAt   DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  store         Store?
+  orders        Order[]
+  cart          Cart?
+  reviews       Review[]
+  addresses     Address[]
+  chats         ChatParticipant[]
+  notifications Notification[]
+  otpCodes      OtpCode[]
+  wishlists     Wishlist[]
+  culturalPosts CulturalPost[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── STORE ────────────────────────────────────────────────────────────────
+
+model Store {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  slug        String   @unique
+  description String?
+  province    String
+  city        String?
+  district    String?       // Kecamatan — untuk pickup kurir
+  village     String?       // Kelurahan — untuk pickup kurir
+  address     String?       // Alamat jalan lengkap — untuk pickup kurir
+  postalCode  String?       // Kode pos — WAJIB untuk API kurir
+  phone       String?       // No. HP toko untuk kurir pickup
+  logoUrl     String?
+  bannerUrl   String?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  bankName    String?
+  bankAccount String?
+  bankHolder  String?
+  rating      Float    @default(0)
+  totalSold   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  products    Product[]
+  withdrawals Withdrawal[]
+
+  @@map("stores")
+}
+
+// ─── CATEGORIES & PRODUCTS ────────────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  icon      String?
+  imageUrl  String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  storeId       String
+  categoryId    String
+  name          String
+  slug          String   @unique
+  description   String
+  price         Int
+  originalPrice Int?
+  stock         Int      @default(1)
+  isActive      Boolean  @default(true)   // langsung publish saat upload
+  isFeatured    Boolean   @default(false)
+  isFlashSale   Boolean   @default(false)
+  isCurated     Boolean   @default(false) // sudah melalui review tim
+  curatedAt     DateTime?
+  rejectionReason String? // alasan penolakan dari admin
+  isSoldOffline Boolean   @default(false) // terjual di luar platform
+  soldOfflineAt DateTime?
+  flashSalePrice Int?
+  material      String?
+  dimensions    String?
+  length        Int?      // cm — panjang
+  width         Int?      // cm — lebar
+  height        Int?      // cm — tinggi
+  weight        Int?      // gram
+  origin        String?
+  hasCertificate   Boolean  @default(false)
+  certificateId    String?
+  nftTokenId       String?
+  nftTxHash        String?
+  nftMintedAt      DateTime?
+  tags          String[]
+  rating        Float    @default(0)
+  reviewCount   Int      @default(0)
+  soldCount     Int      @default(0)
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  store         Store    @relation(fields: [storeId], references: [id])
+  category      Category @relation(fields: [categoryId], references: [id])
+  images        ProductImage[]
+  reviews       Review[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  wishlists     Wishlist[]
+  certificate   Certificate?
+  chats         Chat[]
+  culturalPosts CulturalPost[]
+
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+// ─── CART ─────────────────────────────────────────────────────────────────
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  qty       Int      @default(1)
+  selected  Boolean  @default(true)
+  addedAt   DateTime @default(now())  // untuk cart timer
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+// ─── ORDERS & ESCROW ──────────────────────────────────────────────────────
+
+model Order {
+  id               String        @id @default(cuid())
+  orderNumber      String        @unique @default(cuid())
+  userId           String
+  addressId        String
+  status           OrderStatus   @default(PENDING_PAYMENT)
+  note             String?
+  subtotal         Int
+  shippingCost     Int
+  platformFee      Int
+  discount         Int           @default(0)
+  total            Int
+  paymentMethod    String?
+  paymentStatus    PaymentStatus @default(UNPAID)
+  midtransOrderId  String?
+  midtransSnapToken String?
+  paymentRef       String?   // iPaymu SessionID / TransactionId
+  paymentDeadline  DateTime? // batas waktu pembayaran (default 30 menit dari buat order)
+  paidAt           DateTime?
+  courierName      String?
+  courierService   String?
+  trackingNumber   String?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+  estimatedArrival String?
+  escrowStatus     EscrowStatus  @default(WAITING)
+  escrowReleasedAt DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id])
+  address          Address       @relation(fields: [addressId], references: [id])
+  items            OrderItem[]
+  reviews          Review[]
+  chats            Chat[]
+  certificate      Certificate?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  qty         Int
+  price       Int
+  productName String
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// ─── ADDRESS ──────────────────────────────────────────────────────────────
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  label     String  @default("Rumah")
+  name      String
+  phone     String
+  address   String
+  city      String
+  province  String
+  zip       String
+  isDefault Boolean @default(false)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+
+  @@map("addresses")
+}
+
+// ─── REVIEW ───────────────────────────────────────────────────────────────
+
+model Review {
+  id         String   @id @default(cuid())
+  orderId    String
+  productId  String
+  userId     String
+  rating     Int
+  comment    String?
+  imageUrls  String[]
+  isVerified Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([orderId, productId, userId])
+  @@map("reviews")
+}
+
+// ─── CHAT ─────────────────────────────────────────────────────────────────
+
+model Chat {
+  id           String            @id @default(cuid())
+  orderId      String?
+  productId    String?                          // konteks produk yang ditanyakan
+  createdAt    DateTime          @default(now())
+  order        Order?            @relation(fields: [orderId], references: [id])
+  product      Product?          @relation(fields: [productId], references: [id])
+  participants ChatParticipant[]
+  messages     Message[]
+
+  @@map("chats")
+}
+
+model ChatParticipant {
+  id     String @id @default(cuid())
+  chatId String
+  userId String
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([chatId, userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  chatId    String
+  senderId  String
+  content   String
+  isBlocked Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  chat      Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// ─── WISHLIST & NOTIFICATION ──────────────────────────────────────────────
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("wishlists")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+model Withdrawal {
+  id          String           @id @default(cuid())
+  storeId     String
+  amount      Int              // jumlah yang diminta seller
+  fee         Int              @default(0) // fee platform yang dipotong
+  netAmount   Int              // yang diterima seller
+  status      WithdrawalStatus @default(PENDING)
+  bankName    String
+  bankAccount String
+  bankHolder  String
+  adminNote   String?          // catatan admin saat approve/reject
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+  store       Store            @relation(fields: [storeId], references: [id])
+
+  @@map("withdrawals")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TRANSFERRED
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "bank_change" | "pin_reset" | "withdrawal"
+  code      String   // hashed OTP
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_codes")
+}
+
+// ─── CERTIFICATE (SBT / PHYGITAL NFT) ────────────────────────────────────
+
+model Certificate {
+  id            String    @id                  // MAJA-YYYY-XXXXXXXX
+  productId     String    @unique
+  orderId       String?   @unique              // set saat karya terjual
+  sellerName    String                         // snapshot nama seniman
+  sellerStore   String                         // snapshot nama toko
+  buyerName     String?                        // set saat terjual
+  buyerEmail    String?                        // untuk pengiriman email
+  productName   String                         // snapshot nama produk
+  material      String?
+  dimensions    String?
+  weight        String?
+  origin        String?
+  imageUrl      String?                        // path gambar sertifikat (generated)
+  productImageUrl String?                      // path foto produk asli
+  nftTokenId    String?                        // BSC SBT token ID (fase 3)
+  nftTxHash     String?                        // BSC tx hash
+  nftMintedAt   DateTime?
+  transferredAt DateTime?                      // saat SBT di-assign ke buyer
+  issuedAt      DateTime  @default(now())
+  product       Product   @relation(fields: [productId], references: [id])
+  order         Order?    @relation(fields: [orderId], references: [id])
+
+  @@map("certificates")
+}
+
+// ─── RUANG BUDAYA ─────────────────────────────────────────────────────────
+
+enum CulturalPostType {
+  ARTIKEL       // Artikel editorial budaya
+  CERITA_KARYA  // Story behind the craft (terhubung ke produk)
+  ACARA         // Event, workshop, pameran
+}
+
+model CulturalPost {
+  id            String           @id @default(cuid())
+  type          CulturalPostType @default(ARTIKEL)
+  title         String
+  slug          String           @unique
+  excerpt       String?          // ringkasan singkat
+  content       String           // rich text HTML
+  coverImage    String?          // URL gambar cover
+  tags          String[]         // tag kategori
+  authorId      String           // admin yang posting
+  isPublished   Boolean          @default(false)
+  publishedAt   DateTime?
+  viewCount     Int              @default(0)
+
+  // Untuk CERITA_KARYA — link ke produk terkait
+  productId     String?
+
+  // Untuk ACARA — detail event
+  eventDate     DateTime?
+  eventLocation String?
+  eventMaxRsvp  Int?             // max peserta (null = unlimited)
+  contactUrl    String?          // link ke halaman kontak / form registrasi
+
+  author        User             @relation(fields: [authorId], references: [id])
+  product       Product?         @relation(fields: [productId], references: [id])
+  rsvps         CulturalRsvp[]
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("cultural_posts")
+}
+
+model CulturalRsvp {
+  id        String       @id @default(cuid())
+  postId    String
+  name      String
+  email     String
+  phone     String?
+  message   String?
+  createdAt DateTime     @default(now())
+  post      CulturalPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, email])
+  @@map("cultural_rsvps")
+}

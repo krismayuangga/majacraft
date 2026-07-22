@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env
+.env.local
+.env.production
 
 # vercel
 .vercel
@@ -39,3 +42,44 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma
+/src/generated/prisma
+prisma/.env
+
+# logs
+/logs
+*.log
+
+# uploads (user generated content)
+/uploads
+/public/uploads
+
+# session files
+flask_session/
+session.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PM2
+ecosystem.config.js
+
+# Database
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old

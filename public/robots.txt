@@ -1,0 +1,57 @@
+# MajaCraft.id Robots Configuration
+# Last updated: 2026-07-19
+
+User-agent: *
+Allow: /
+Allow: /produk/
+Allow: /kategori/
+Allow: /toko/
+Allow: /ruang-budaya/
+Allow: /program-seniman/
+
+# Disallow crawl paths
+Disallow: /admin/
+Disallow: /studio/
+Disallow: /api/
+Disallow: /akun/
+Disallow: /checkout/
+Disallow: /keranjang/
+Disallow: /masuk/
+Disallow: /daftar/
+Disallow: /uploads/
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*page=
+Disallow: /pesanan/
+Disallow: /lacak-pesanan/
+Disallow: /wishlist/
+Disallow: /chat/
+Disallow: /static/
+
+# Crawl delay & rate limiting
+Crawl-delay: 1
+Request-rate: 10/1s
+
+# Sitemap location
+Sitemap: https://majacraft.id/sitemap.xml
+
+# Google specifics
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+# Bing
+User-agent: Bingbot
+Allow: /
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
