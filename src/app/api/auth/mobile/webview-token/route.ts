@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { SignJWT } from "jose";
+import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
 
-const JWT_SECRET  = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret";
-const BASE_URL    = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://majacraft.id";
+const MOBILE_JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret";
+const NEXTAUTH_SECRET   = process.env.NEXTAUTH_SECRET!;
+const BASE_URL          = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://majacraft.id";
+
+// NextAuth v5: cookie name = salt untuk encode/decode
 const COOKIE_NAME = process.env.NODE_ENV === "production"
   ? "__Secure-next-auth.session-token"
   : "next-auth.session-token";
@@ -25,18 +28,16 @@ function redirectTo(path: string): NextResponse {
 /**
  * GET /api/auth/mobile/webview-token
  *
- * Menukar JWT mobile menjadi NextAuth session cookie agar WebView terotentikasi.
+ * Menukar mobile JWT → NextAuth session cookie (JWE format) agar WebView login.
+ *
+ * NextAuth v5 menggunakan JWE (encrypted token), bukan plain HS256.
+ * encode() dari next-auth/jwt membuat token dalam format yang benar.
+ * salt = nama cookie (penting untuk NextAuth v5 key derivation).
  *
  * Query params:
  *   token    — JWT dari /api/auth/mobile/login atau /google
- *   redirect — Path tujuan setelah login (harus mulai dengan /, default: /)
- *   debug    — "1" untuk mendapatkan JSON response (testing PowerShell/curl)
- *
- * Jika Accept header bukan text/html ATAU ?debug=1:
- *   return JSON { verified, userId, redirect, secretSource }
- *
- * Untuk WebView: selalu redirect, tidak pernah return JSON error.
- * Token invalid / expired → redirect ke /
+ *   redirect — Path tujuan (default: /)
+ *   debug    — "1" untuk return JSON (testing PowerShell/curl)
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -45,70 +46,70 @@ export async function GET(req: NextRequest) {
   const debugMode    = searchParams.get("debug") === "1" ||
                        !req.headers.get("accept")?.includes("text/html");
 
-  const secretSource = process.env.JWT_SECRET
-    ? "JWT_SECRET"
-    : process.env.NEXTAUTH_SECRET
-    ? "NEXTAUTH_SECRET"
-    : "fallback";
-
-  console.log(`[webview-token] debug=${debugMode} secretSource=${secretSource} redirect=${redirectPath}`);
+  console.log(`[webview-token] debug=${debugMode} cookieName=${COOKIE_NAME} redirect=${redirectPath}`);
 
   if (!token) {
-    console.log("[webview-token] no token provided");
-    if (debugMode) {
-      return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: "Token tidak ada", secretSource });
-    }
+    console.log("[webview-token] ❌ No token");
+    if (debugMode) return NextResponse.json({ verified: false, error: "Token tidak ada", cookieName: COOKIE_NAME });
     return redirectTo("/");
   }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub?: string; email?: string; name?: string };
-    console.log("[webview-token] JWT verified, sub:", payload.sub);
+    // 1. Verifikasi mobile JWT (HS256, dibuat oleh /login atau /google)
+    const payload = jwt.verify(token, MOBILE_JWT_SECRET) as {
+      sub?: string; email?: string; name?: string; role?: string;
+    };
+    console.log("[webview-token] ✅ JWT verified sub:", payload.sub);
 
     if (!payload?.sub) {
-      if (debugMode) return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: "sub missing in payload", secretSource });
+      if (debugMode) return NextResponse.json({ verified: false, error: "sub missing", cookieName: COOKIE_NAME });
       return redirectTo("/");
     }
 
+    // 2. Ambil data user terbaru dari DB
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, status: true },
+      select: { id: true, email: true, name: true, role: true, image: true, status: true },
     });
 
-    console.log("[webview-token] user found:", !!user, "status:", user?.status);
-
     if (!user || user.status === "BANNED" || user.status === "SUSPENDED") {
-      if (debugMode) return NextResponse.json({ verified: false, userId: payload.sub, redirect: redirectPath, error: `User not found or blocked (status=${user?.status})`, secretSource });
+      console.log("[webview-token] ❌ User blocked/not found:", user?.status);
+      if (debugMode) return NextResponse.json({ verified: false, error: `User blocked (${user?.status})`, cookieName: COOKIE_NAME });
       return redirectTo("/");
     }
 
-    const secretKey = new TextEncoder().encode(JWT_SECRET);
-    const now       = Math.floor(Date.now() / 1000);
+    // 3. Buat NextAuth session token — HARUS pakai encode() dari next-auth/jwt
+    //    dengan salt = nama cookie agar format JWE benar dan NextAuth bisa decode
+    const sessionToken = await encode({
+      token: {
+        sub:   user.id,
+        id:    user.id,
+        email: user.email ?? undefined,
+        name:  user.name ?? undefined,
+        image: user.image ?? undefined,
+        role:  user.role,
+      },
+      secret: NEXTAUTH_SECRET,
+      salt:   COOKIE_NAME,   // KRITIS: salt harus sama dengan nama cookie
+      maxAge: 30 * 24 * 60 * 60,
+    });
 
-    const sessionToken = await new SignJWT({
-      sub:   user.id,
-      email: user.email,
-      name:  user.name,
-      iat:   now,
-      exp:   now + 30 * 24 * 60 * 60,
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .sign(secretKey);
-
-    console.log("[webview-token] session token created, redirecting to:", redirectPath);
+    console.log("[webview-token] ✅ Session encoded (JWE), cookieName:", COOKIE_NAME);
 
     if (debugMode) {
       return NextResponse.json({
         verified: true,
-        userId: user.id,
-        email: user.email,
+        userId:   user.id,
+        email:    user.email,
+        role:     user.role,
         redirect: redirectPath,
-        secretSource,
         cookieName: COOKIE_NAME,
-        sessionTokenPreview: sessionToken.slice(0, 20) + "...",
+        tokenFormat: "JWE (NextAuth v5 compatible)",
+        tokenPreview: sessionToken.slice(0, 30) + "...",
       });
     }
 
+    // 4. Redirect + set cookie
     const response = redirectTo(redirectPath);
     response.cookies.set(COOKIE_NAME, sessionToken, {
       httpOnly: true,
@@ -121,10 +122,8 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[webview-token] JWT verify failed:", msg, "secretSource:", secretSource);
-    if (debugMode) {
-      return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: msg, secretSource });
-    }
+    console.error("[webview-token] ❌ Error:", msg);
+    if (debugMode) return NextResponse.json({ verified: false, error: msg, cookieName: COOKIE_NAME });
     return redirectTo("/");
   }
 }
