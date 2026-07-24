@@ -57,24 +57,27 @@ export async function GET(req: NextRequest) {
   try {
     // 1. Verifikasi mobile JWT (HS256, dibuat oleh /login atau /google)
     const payload = jwt.verify(token, MOBILE_JWT_SECRET) as {
-      sub?: string; email?: string; name?: string; role?: string;
+      sub?: string; userId?: string; email?: string; name?: string; role?: string;
     };
-    console.log("[webview-token] ✅ JWT verified sub:", payload.sub);
 
-    if (!payload?.sub) {
-      if (debugMode) return NextResponse.json({ verified: false, error: "sub missing", cookieName: COOKIE_NAME });
+    // /login menggunakan field "userId", /google menggunakan "sub"
+    const resolvedId = payload.sub || payload.userId;
+    console.log("[webview-token] ✅ JWT verified sub/userId:", resolvedId);
+
+    if (!resolvedId) {
+      if (debugMode) return NextResponse.json({ verified: false, error: "sub or userId missing in payload", cookieName: COOKIE_NAME });
       return redirectTo("/");
     }
 
     // 2. Ambil data user terbaru dari DB
     const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: resolvedId },
       select: { id: true, email: true, name: true, role: true, image: true, status: true },
     });
 
     if (!user || user.status === "BANNED" || user.status === "SUSPENDED") {
       console.log("[webview-token] ❌ User blocked/not found:", user?.status);
-      if (debugMode) return NextResponse.json({ verified: false, error: `User blocked (${user?.status})`, cookieName: COOKIE_NAME });
+      if (debugMode) return NextResponse.json({ verified: false, error: `User blocked (${user?.status})`, userId: resolvedId, cookieName: COOKIE_NAME });
       return redirectTo("/");
     }
 
