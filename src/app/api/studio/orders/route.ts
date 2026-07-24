@@ -12,10 +12,18 @@ export async function GET(req: NextRequest) {
 
   const status = req.nextUrl.searchParams.get("status") ?? undefined;
 
-  // Auto-complete pesanan SHIPPED > 3 hari (berlaku global, bukan hanya toko ini)
+  // Auto-complete pesanan SHIPPED/DELIVERED > 3 hari (tanpa komplain aktif)
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   await prisma.order.updateMany({
-    where: { status: "SHIPPED", shippedAt: { lt: threeDaysAgo } },
+    where: {
+      OR: [
+        { status: "DELIVERED", deliveredAt: { lt: threeDaysAgo } },
+        { status: "SHIPPED", shippedAt: { lt: threeDaysAgo } },
+      ],
+      disputes: {
+        none: { status: { in: ["PENDING_SELLER", "SELLER_RESPONDED", "IN_MEDIATION", "REFUND_PENDING", "REFUND_FAILED"] } },
+      },
+    },
     data: { status: "COMPLETED", escrowStatus: "RELEASING", deliveredAt: new Date() },
   });
 
@@ -50,17 +58,34 @@ export async function GET(req: NextRequest) {
         include: { product: { include: { images: { where: { isPrimary: true }, take: 1 } } } },
       },
       address: { select: { city: true, province: true } },
+      disputes: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          disputeNumber: true,
+          status: true,
+          createdAt: true,
+        },
+      },
     },
   });
 
   return ok(orders);
 }
 
-// Helper: auto-complete pesanan SHIPPED > 3 hari (dipanggil dari berbagai endpoint)
+// Helper: auto-complete pesanan SHIPPED/DELIVERED > 3 hari (dipanggil dari berbagai endpoint)
 export async function autoCompleteShipped() {
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   await prisma.order.updateMany({
-    where: { status: "SHIPPED", shippedAt: { lt: threeDaysAgo } },
+    where: {
+      OR: [
+        { status: "DELIVERED", deliveredAt: { lt: threeDaysAgo } },
+        { status: "SHIPPED", shippedAt: { lt: threeDaysAgo } },
+      ],
+      disputes: {
+        none: { status: { in: ["PENDING_SELLER", "SELLER_RESPONDED", "IN_MEDIATION", "REFUND_PENDING", "REFUND_FAILED"] } },
+      },
+    },
     data: { status: "COMPLETED", escrowStatus: "RELEASING", deliveredAt: new Date() },
   });
 }

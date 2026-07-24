@@ -69,6 +69,13 @@ export interface IpaymuRedirectResult {
   error?: string;
 }
 
+export interface IpaymuRefundResult {
+  success: boolean;
+  refundId?: string;
+  rawStatus?: number | string;
+  error?: string;
+}
+
 /**
  * Redirect Payment — user diarahkan ke halaman iPaymu untuk memilih/membayar
  *
@@ -188,5 +195,67 @@ export async function checkTransaction(transactionId: string) {
     return await res.json();
   } catch {
     return null;
+  }
+}
+
+/**
+ * Refund transaksi via iPaymu.
+ * Catatan: endpoint default dapat disesuaikan lewat env IPAYMU_REFUND_PATH
+ * bila dokumentasi merchant menggunakan path berbeda.
+ */
+export async function createRefund(params: {
+  transactionId: string;
+  amount: number;
+  reason?: string;
+  referenceId?: string;
+}): Promise<IpaymuRefundResult> {
+  assertEnv();
+
+  const autoRefundEnabled = process.env.IPAYMU_AUTO_REFUND === "true";
+  const configuredPath = process.env.IPAYMU_REFUND_PATH;
+  if (!autoRefundEnabled || !configuredPath) {
+    return {
+      success: false,
+      error: "Auto refund belum diaktifkan. Set IPAYMU_AUTO_REFUND=true dan IPAYMU_REFUND_PATH.",
+    };
+  }
+
+  const body = {
+    transactionId: params.transactionId,
+    amount: Number(params.amount),
+    reason: params.reason ?? "Dispute resolution refund",
+    ...(params.referenceId ? { referenceId: params.referenceId } : {}),
+  };
+
+  const refundPath = configuredPath;
+  const endpoint = `${BASE_URL}${refundPath.startsWith("/") ? refundPath : `/${refundPath}`}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: buildHeaders(body),
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    const statusCode = json?.Status ?? json?.status ?? res.status;
+    const success =
+      statusCode === 200 ||
+      statusCode === "200" ||
+      json?.success === true ||
+      json?.StatusDesc === "Success";
+
+    if (success) {
+      return {
+        success: true,
+        refundId: json?.Data?.RefundId ?? json?.Data?.TransactionId ?? json?.Data?.id,
+        rawStatus: statusCode,
+      };
+    }
+
+    const msg = json?.Message ?? json?.Data?.Message ?? `Refund gagal (status ${statusCode})`;
+    return { success: false, rawStatus: statusCode, error: msg };
+  } catch (e) {
+    return { success: false, error: String(e) };
   }
 }

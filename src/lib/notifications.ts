@@ -2,11 +2,17 @@ import { prisma } from "@/lib/prisma";
 
 export type NotifType =
   | "product_published"
-  | "product_curated"
+  | "product_moderated"
   | "product_rejected"
   | "new_order"
   | "order_status"
   | "new_chat"
+  | "dispute_created"
+  | "dispute_seller_responded"
+  | "dispute_escalated"
+  | "dispute_admin_assigned"
+  | "dispute_resolved"
+  | "dispute_cancelled"
   | "system";
 
 export async function createNotification({

@@ -19,14 +19,17 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     },
   });
   if (!order) return err("Pesanan tidak ditemukan", 404);
-  if (order.status !== "SHIPPED") return err("Pesanan belum dalam status dikirim");
+  if (order.status !== "SHIPPED" && order.status !== "DELIVERED") {
+    return err("Status pesanan tidak valid untuk konfirmasi", 400);
+  }
 
+  // Finalisasi transaksi (langsung selesai)
   const updated = await prisma.order.update({
     where: { id },
     data: {
       status: "COMPLETED",
       escrowStatus: "RELEASING",
-      deliveredAt: new Date(),
+      deliveredAt: order.deliveredAt ?? new Date(),
     },
   });
 
@@ -37,8 +40,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     await createNotification({
       userId: storeUserId,
       type: "order_status",
-      title: "Pembeli Konfirmasi Penerimaan! ✅",
-      body: `Pesanan #${order.orderNumber} telah diterima pembeli. Dana escrow akan segera diproses.`,
+      title: "Pesanan Difinalkan Pembeli! ✅",
+      body: `Pesanan #${order.orderNumber} telah diselesaikan pembeli. Dana escrow akan segera diproses.`,
       data: { orderId: order.id, orderNumber: order.orderNumber },
     });
   }

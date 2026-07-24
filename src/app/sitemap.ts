@@ -92,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const featuredProducts = await prisma.product.findMany({
       where: {
         isActive: true,
-        isCurated: true,
+        isModerated: true,
       },
       select: { slug: true, updatedAt: true },
       take: 500, // Limit to avoid huge sitemap

@@ -2,21 +2,27 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, requireAdmin } from "@/lib/api-helpers";
 
-// GET /api/admin/products — produk pending kurasi
+// GET /api/admin/products — products for moderation review
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const status = req.nextUrl.searchParams.get("status"); // "pending" | "active" | "all"
+  const status = req.nextUrl.searchParams.get("status"); // "pending" | "active" | "rejected" | "all"
   const page = parseInt(req.nextUrl.searchParams.get("page") ?? "1");
   const limit = 20;
 
-  // pending = belum dikurasi DAN (baru pertama kali ATAU sudah diperbarui seller)
-  // Tidak termasuk: rejected yang masih menunggu seller fix (isActive: false + rejectionReason != null)
+  // pending          = baru diupload, live, belum dikurasi admin
+  // needs_fix        = admin sudah kirim masukan, seller perlu perbaiki (produk tetap publik)
+  // active           = sudah dikurasi dan disetujui admin
+  // inactive         = admin nonaktifkan secara manual (pelanggaran serius)
   const where = status === "pending"
-    ? { isCurated: false, OR: [{ rejectionReason: null }, { isActive: true }] }
+    ? { isActive: true, isModerated: false, rejectionReason: null }
+    : status === "needs_fix"
+    ? { isModerated: false, rejectionReason: { not: null } }
     : status === "active"
-    ? { isActive: true, isCurated: true }
+    ? { isActive: true, isModerated: true }
+    : status === "inactive"
+    ? { isActive: false }
     : {};
 
   const [products, total] = await Promise.all([

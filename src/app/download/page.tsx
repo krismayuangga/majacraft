@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Download, Smartphone, CheckCircle2, Shield, Zap } from 'lucide-react';
+import { useModernDialog } from '@/components/ui/modern-dialog';
 
 export default function DownloadPage() {
   const [downloading, setDownloading] = useState(false);
@@ -10,6 +11,7 @@ export default function DownloadPage() {
     size: '~45 MB',
     lastUpdate: new Date().toLocaleDateString('id-ID'),
   });
+  const dialog = useModernDialog();
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -26,7 +28,7 @@ export default function DownloadPage() {
       // await fetch('/api/analytics/track', { method: 'POST', body: JSON.stringify({ event: 'apk_download' }) });
     } catch (error) {
       console.error('Download error:', error);
-      alert('Gagal mengunduh APK. Silakan coba lagi.');
+      await dialog.alert('Gagal mengunduh APK. Silakan coba lagi.');
     } finally {
       setTimeout(() => setDownloading(false), 2000);
     }

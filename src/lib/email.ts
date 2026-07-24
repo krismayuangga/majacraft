@@ -202,25 +202,25 @@ export function buildOrderShippedEmail(order: {
   `);
 }
 
-// ─── Template 5: Karya lolos kurasi → Seller ─────────────────────────────────
-export function buildProductCuratedEmail(productName: string, productSlug: string) {
+// ─── Template 5: Product approved → Seller ───────────────────────────────────
+export function buildProductModeratedEmail(productName: string, productSlug: string) {
   return emailLayout(`
-    ${badge("✅ Karya Lolos Kurasi!", "#1A5E2A", "#FFFFFF")}
-    <p style="color:#EDE8DE;font-size:14px;margin:0 0 24px;line-height:1.6;">Selamat! Karya Anda telah melalui proses kurasi tim MajaCraft dan dinyatakan lolos. Karya Anda kini tampil dengan badge <strong style="color:#C9A84C;">Terverifikasi</strong> di marketplace.</p>
-    ${infoCard([{ label: "Karya", value: productName, gold: true }])}
-    ${ctaButton("Lihat Karya di Marketplace →", `${BASE_URL}/produk/${productSlug}`)}
+    ${badge("✅ Produk Disetujui!", "#1A5E2A", "#FFFFFF")}
+    <p style="color:#EDE8DE;font-size:14px;margin:0 0 24px;line-height:1.6;">Produk Anda telah disetujui dan kini aktif di marketplace MajaCraft. Pembeli dapat langsung melihat dan membeli produk Anda.</p>
+    ${infoCard([{ label: "Produk", value: productName, gold: true }])}
+    ${ctaButton("Lihat Produk di Marketplace →", `${BASE_URL}/produk/${productSlug}`)}
     <p style="color:#8A7A62;font-size:12px;text-align:center;margin:0;">Terima kasih telah menjadi bagian dari komunitas seniman MajaCraft.</p>
   `);
 }
 
-// ─── Template 6: Karya ditolak kurasi → Seller ───────────────────────────────
+// ─── Template 6: Product rejected → Seller ───────────────────────────────────
 export function buildProductRejectedEmail(productName: string, reason: string) {
   return emailLayout(`
-    ${badge("⚠️ Karya Perlu Diperbaiki", "#7C2D12", "#FFFFFF")}
-    <p style="color:#EDE8DE;font-size:14px;margin:0 0 20px;line-height:1.6;">Karya Anda belum lolos proses kurasi. Silakan lakukan perbaikan dan upload ulang.</p>
+    ${badge("⚠️ Produk Ditolak", "#7C2D12", "#FFFFFF")}
+    <p style="color:#EDE8DE;font-size:14px;margin:0 0 20px;line-height:1.6;">Produk Anda tidak sesuai dengan panduan platform MajaCraft. Silakan lakukan perbaikan dan upload ulang.</p>
     ${infoCard([
-      { label: "Karya", value: productName },
-      ...(reason ? [{ label: "Catatan Kurator", value: reason }] : []),
+      { label: "Produk", value: productName },
+      ...(reason ? [{ label: "Alasan Penolakan", value: reason }] : []),
     ])}
     ${ctaButton("Perbaiki &amp; Upload Ulang →", `${BASE_URL}/studio`)}
     <p style="color:#8A7A62;font-size:12px;text-align:center;margin:0;">Jika ada pertanyaan, hubungi kami di halo@majacraft.id</p>
@@ -259,5 +259,45 @@ export function buildWithdrawalEmail(
     ])}
     ${ctaButton("Lihat Riwayat Pencairan →", `${BASE_URL}/studio`)}
     ${status === "TRANSFERRED" ? `<p style="color:#8A7A62;font-size:12px;text-align:center;margin:0;">Jika dana belum diterima dalam 1×24 jam, hubungi halo@majacraft.id</p>` : ""}
+  `);
+}
+
+export function buildDisputeCreatedEmail(params: {
+  recipientName: string;
+  disputeNumber: string;
+  orderNumber: string;
+  reasonLabel: string;
+  description: string;
+  detailUrl: string;
+}) {
+  return emailLayout(`
+    ${badge("⚠️ Komplain Baru Diajukan", "#7C2D12", "#FFFFFF")}
+    ${greeting(params.recipientName, "Ada komplain baru yang memerlukan respons Anda.")}
+    ${infoCard([
+      { label: "Nomor Komplain", value: params.disputeNumber, gold: true },
+      { label: "No. Pesanan", value: `#${params.orderNumber}` },
+      { label: "Alasan", value: params.reasonLabel },
+    ])}
+    <p style="color:#EDE8DE;font-size:13px;margin:0 0 18px;line-height:1.6;">${params.description}</p>
+    ${ctaButton("Buka Ruang Komplain →", params.detailUrl)}
+  `);
+}
+
+export function buildDisputeStatusEmail(params: {
+  recipientName: string;
+  title: string;
+  message: string;
+  disputeNumber: string;
+  orderNumber: string;
+  detailUrl: string;
+}) {
+  return emailLayout(`
+    ${badge(params.title, "#1A5E2A", "#FFFFFF")}
+    ${greeting(params.recipientName, params.message)}
+    ${infoCard([
+      { label: "Nomor Komplain", value: params.disputeNumber, gold: true },
+      { label: "No. Pesanan", value: `#${params.orderNumber}` },
+    ])}
+    ${ctaButton("Lihat Detail Komplain →", params.detailUrl)}
   `);
 }

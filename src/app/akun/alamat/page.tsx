@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ArrowLeft, Plus, MapPin, Edit3, Trash2, Check, X, Loader2, Star, Navigation } from "lucide-react";
+import { useModernDialog } from "@/components/ui/modern-dialog";
 
 // Lazy load map (tidak support SSR)
 const MapPicker = dynamic(() => import("@/components/MapPicker"), { ssr: false, loading: () => (
@@ -32,6 +33,7 @@ export default function AlamatPage() {
   const [districts, setDistricts] = useState<Region[]>([]);
   const [villages, setVillages] = useState<Region[]>([]);
   const [loadingRegion, setLoadingRegion] = useState({ city: false, district: false, village: false });
+  const dialog = useModernDialog();
 
   const load = async () => {
     setLoading(true);
@@ -117,7 +119,7 @@ export default function AlamatPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus alamat ini?")) return;
+    if (!(await dialog.confirm("Hapus alamat ini?"))) return;
     await fetch(`/api/addresses/${id}`, { method: "DELETE" });
     await load();
   };

@@ -38,7 +38,7 @@ export default async function TokoPage({ params }: { params: Promise<{ slug: str
     category: p.category?.slug ?? "",
     seller: { name: store.name, avatar: store.logoUrl ?? "", location: store.province, rating: Number(store.rating), sold: p.soldCount },
     rating: Number(p.rating), reviews: p.reviewCount, sold: p.soldCount,
-    isPhygital: p.hasCertificate, isVerified: store.isVerified, isFeatured: p.isFeatured, isCurated: p.isCurated, isSoldOffline: p.isSoldOffline,
+    isPhygital: p.hasCertificate, isVerified: store.isVerified, isFeatured: p.isFeatured, isModerated: p.isModerated, isSoldOffline: p.isSoldOffline,
     hasCertificate: p.hasCertificate, certificateId: p.certificateId ?? "",
     stock: p.stock, material: p.material ?? "", dimensions: p.dimensions ?? "",
     weight: p.weight ? `${p.weight} gram` : "", origin: p.origin ?? "",

@@ -6,6 +6,7 @@ import { createNotification } from "@/lib/notifications";
 import { trackWaybill } from "@/lib/rajaongkir";
 
 const TRACKING_REGEX = /^[A-Z0-9]+$/;
+const TEST_RESI_REGEX = /^TEST[A-Z0-9]{4,}$/;
 
 function normalizeCourier(raw: unknown) {
   return String(raw ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
@@ -13,6 +14,14 @@ function normalizeCourier(raw: unknown) {
 
 function normalizeTracking(raw: unknown) {
   return String(raw ?? "").trim().toUpperCase().replace(/[\s-]+/g, "");
+}
+
+function isTestResiEnabled() {
+  return process.env.ALLOW_TEST_RESI === "true";
+}
+
+function isTestResi(trackingNumber: string) {
+  return TEST_RESI_REGEX.test(trackingNumber);
 }
 
 // POST /api/studio/orders/[id]/ship — seller input no resi dan kirim
@@ -52,20 +61,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const finalCourierName = courierName || order.courierName || "Kurir";
   const finalCourierService = courierService || order.courierService || null;
+  const useTestResiBypass = isTestResiEnabled() && isTestResi(trackingNumber);
 
   // Hard check: resi harus bisa dilacak secara live sebelum status berubah ke SHIPPED.
-  try {
-    const live = await trackWaybill({
-      waybill: trackingNumber,
-      courier: finalCourierName,
-    });
+  // Untuk QA terkontrol, resi dengan prefix TEST... bisa diizinkan via ALLOW_TEST_RESI=true.
+  if (!useTestResiBypass) {
+    try {
+      const live = await trackWaybill({
+        waybill: trackingNumber,
+        courier: finalCourierName,
+      });
 
-    const noLiveSignal = live.events.length === 0 && /not\s*found|tidak\s*ditemukan|invalid|unknown|belum/i.test(live.status);
-    if (noLiveSignal) {
+      const noLiveSignal = live.events.length === 0 && /not\s*found|tidak\s*ditemukan|invalid|unknown|belum/i.test(live.status);
+      if (noLiveSignal) {
+        return err("Nomor resi belum terdeteksi di sistem kurir. Gunakan resi aktif yang valid.", 422);
+      }
+    } catch {
       return err("Nomor resi belum terdeteksi di sistem kurir. Gunakan resi aktif yang valid.", 422);
     }
-  } catch {
-    return err("Nomor resi belum terdeteksi di sistem kurir. Gunakan resi aktif yang valid.", 422);
   }
 
   await prisma.order.update({

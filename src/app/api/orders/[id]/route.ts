@@ -21,6 +21,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         },
       },
       address: true,
+      reviews: {
+        select: { productId: true },
+      },
+      disputes: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          disputeNumber: true,
+          createdAt: true,
+        },
+      },
     },
   });
 

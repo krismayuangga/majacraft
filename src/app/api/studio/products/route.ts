@@ -63,8 +63,9 @@ export async function POST(req: NextRequest) {
       height: height ? parseInt(height) : null,
       origin: origin ?? store.province,
       tags: Array.isArray(tags) ? tags : [],
-      isActive: true,
-      isCurated: false,
+      isActive: true,       // langsung publik agar bisa dibeli
+      isModerated: false,    // belum dikurasi admin — akan muncul di antrian moderasi
+      moderatedAt: null,
       hasCertificate: false, // diset admin secara manual via panel Sertifikat Digital
       // Auto flash sale jika ada diskon
       isFlashSale: !!(originalPrice && parseInt(originalPrice) > parseInt(price)),
@@ -87,8 +88,8 @@ export async function POST(req: NextRequest) {
   await createNotification({
     userId: session!.user!.id!,
     type: "product_published",
-    title: "Karya Berhasil Dipublish! 🎉",
-    body: `Karya "${product.name}" sudah tampil di marketplace. Tim MajaCraft akan segera melakukan kurasi.`,
+    title: "Produk Berhasil Dipublish! 🎉",
+    body: `Produk "${product.name}" sudah aktif di marketplace dan dapat langsung dibeli pembeli.`,
     data: { productId: product.id, productSlug: product.slug },
   });
 

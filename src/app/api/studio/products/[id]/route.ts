@@ -32,8 +32,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     ? !!(newOriginalPrice && newOriginalPrice > newPrice)
     : undefined; // tidak diubah jika price tidak disentuh
 
-  // Jika produk sebelumnya di-reject, re-queue ke Pending saat seller update
-  const wasRejected = !product.isCurated && !product.isActive;
+  // Jika produk pernah dapat masukan admin, saat seller edit → clear reason → kembali ke antrian review
+  const hadFeedback = !product.isModerated && !!product.rejectionReason;
 
   const updated = await prisma.product.update({
     where: { id },
@@ -55,8 +55,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       ...(imageUrls && { images: { deleteMany: {}, create: imageUrls.map((url: string, i: number) => ({ url, isPrimary: i === 0 })) } }),
       // Auto flash sale berdasarkan harga diskon
       ...(autoFlashSale !== undefined && { isFlashSale: autoFlashSale }),
-      // Re-queue ke Pending jika sebelumnya rejected
-      ...(wasRejected && { isActive: true }),
+      // Hapus alasan penolakan saat seller update → produk kembali ke antrian review admin
+      ...(hadFeedback && { rejectionReason: null }),
     },
   });
   return ok(updated);

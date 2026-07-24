@@ -463,7 +463,7 @@ export default async function VerifikasiPage({
             <h3 className="font-semibold text-foreground text-sm mb-2">Tentang Sertifikat Phygital MajaCraft</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
               MajaCraft adalah platform marketplace karya seni dan kerajinan budaya Indonesia yang menghubungkan karya fisik dengan identitas digital melalui teknologi{" "}
-              <em>phygital</em> (physical + digital). Setiap karya yang lolos kurasi mendapatkan Sertifikat Phygital — dokumen digital yang mencatat identitas, asal-usul,
+              <em>phygital</em> (physical + digital). Setiap karya yang disetujui mendapatkan Sertifikat Phygital — dokumen digital yang mencatat identitas, asal-usul,
               material, dan seniman pembuat secara permanen di blockchain BSC. Program ini bertujuan melindungi kekayaan intelektual seniman tradisional Indonesia dan
               memberikan kepercayaan lebih kepada kolektor global.
             </p>

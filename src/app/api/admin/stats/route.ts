@@ -5,7 +5,7 @@ export async function GET() {
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const [totalUsers, totalSellers, totalProducts, totalOrders, totalRevenue, pendingProducts, pendingKyc] = await Promise.all([
+  const [totalUsers, totalSellers, totalProducts, totalOrders, totalRevenue, rejectedProducts, pendingKyc] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: "SELLER" } }),
     prisma.product.count({ where: { isActive: true } }),
@@ -14,7 +14,7 @@ export async function GET() {
       where: { status: "COMPLETED" },
       _sum: { platformFee: true },
     }),
-    prisma.product.count({ where: { isActive: true, isCurated: false } }), // belum dikurasi
+    prisma.product.count({ where: { isActive: false, rejectionReason: { not: null } } }), // rejected items
     prisma.user.count({ where: { kycStatus: "PENDING" } }),
   ]);
 
@@ -33,7 +33,7 @@ export async function GET() {
   return ok({
     totalUsers, totalSellers, totalProducts, totalOrders,
     platformFeeCollected: totalRevenue._sum.platformFee ?? 0,
-    pendingProducts, pendingKyc,
+    rejectedProducts, pendingKyc,
     categories,
     ordersByStatus,
   });

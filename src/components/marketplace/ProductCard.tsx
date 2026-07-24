@@ -134,7 +134,7 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Rating & sold + badge kurasi */}
+          {/* Rating & sold */}
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
             <span className="flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
@@ -142,11 +142,6 @@ export default function ProductCard({ product }: { product: Product }) {
             </span>
             <span>·</span>
             <span>Terjual {product.sold}</span>
-            {product.isCurated && (
-              <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-green-600 border border-green-700/30 bg-green-900/10 px-1.5 py-0.5 rounded-full">
-                ✓ Kurasi
-              </span>
-            )}
           </div>
 
           {/* Seller name */}

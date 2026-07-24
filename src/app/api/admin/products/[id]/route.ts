@@ -2,6 +2,29 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, requireAdmin } from "@/lib/api-helpers";
 
+// PATCH /api/admin/products/[id] — admin toggle isActive (nonaktifkan / aktifkan kembali)
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+
+  if (typeof body.isActive !== "boolean") {
+    return err("isActive (boolean) wajib diisi", 400);
+  }
+
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return err("Produk tidak ditemukan", 404);
+
+  await prisma.product.update({
+    where: { id },
+    data: { isActive: body.isActive },
+  });
+
+  return ok({ message: body.isActive ? "Produk diaktifkan kembali" : "Produk dinonaktifkan" });
+}
+
 // DELETE /api/admin/products/[id] — hapus produk (admin only)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin();

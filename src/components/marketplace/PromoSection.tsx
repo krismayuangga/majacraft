@@ -12,7 +12,7 @@ const PERKS = [
   { icon: ShieldCheck, title: "Sertifikat Phygital", desc: "Setiap karya dilengkapi Sertifikat Phygital — identitas digital yang terdaftar permanen" },
   { icon: Truck, title: "Pengiriman Aman", desc: "Dikemas khusus untuk perlindungan karya seni" },
   { icon: RotateCcw, title: "Jaminan Pengembalian", desc: "30 hari pengembalian jika karya tidak sesuai" },
-  { icon: Award, title: "Seniman Terverifikasi", desc: "Semua penjual melewati kurasi tim MAJA" },
+  { icon: Award, title: "Seniman Terverifikasi", desc: "Semua penjual telah diverifikasi oleh tim MAJA" },
 ];
 
 export default function PromoSection() {

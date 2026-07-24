@@ -1,15 +1,15 @@
-// Mock data untuk development frontend
+// Fallback data untuk gambar kategori (digunakan sebagai image fallback saja, count dari DB)
 export const CATEGORIES = [
-  { id: 1, name: "Kerajinan Batu", slug: "kerajinan-batu", icon: "🗿", image: "/images/cat-batu.jpg", count: 234 },
-  { id: 2, name: "Batik & Kain", slug: "batik-kain", icon: "🧵", image: "/images/cat-batik.jpg", count: 512 },
-  { id: 3, name: "Ukiran Kayu", slug: "ukiran-kayu", icon: "🪵", image: "/images/cat-kayu.jpg", count: 187 },
-  { id: 4, name: "Perhiasan & Logam", slug: "perhiasan-logam", icon: "💫", image: "/images/cat-logam.jpg", count: 320 },
-  { id: 5, name: "Fotografi", slug: "fotografi", icon: "📷", image: "/images/cat-fotografi.jpg", count: 445 },
-  { id: 6, name: "Wayang & Topeng", slug: "wayang-topeng", icon: "🎭", image: "/images/cat-wayang.jpg", count: 98 },
-  { id: 7, name: "Keramik & Gerabah", slug: "keramik-gerabah", icon: "🏺", image: "/images/cat-keramik.jpg", count: 156 },
-  { id: 8, name: "Tas & Aksesoris", slug: "tas-aksesoris", icon: "👜", image: "/images/cat-tas.jpg", count: 278 },
-  { id: 9, name: "Lukisan", slug: "lukisan", icon: "🎨", image: "/images/cat-lukisan.jpg", count: 203 },
-  { id: 10, name: "Lainnya", slug: "lainnya", icon: "✨", image: "/images/cat-lainnya.jpg", count: 421 },
+  { id: 1, name: "Kerajinan Batu", slug: "kerajinan-batu", icon: "🗿", image: "/images/cat-batu.jpg" },
+  { id: 2, name: "Batik & Kain", slug: "batik-kain", icon: "🧵", image: "/images/cat-batik.jpg" },
+  { id: 3, name: "Ukiran Kayu", slug: "ukiran-kayu", icon: "🪵", image: "/images/cat-kayu.jpg" },
+  { id: 4, name: "Perhiasan & Logam", slug: "perhiasan-logam", icon: "💫", image: "/images/cat-logam.jpg" },
+  { id: 5, name: "Fotografi", slug: "fotografi", icon: "📷", image: "/images/cat-fotografi.jpg" },
+  { id: 6, name: "Wayang & Topeng", slug: "wayang-topeng", icon: "🎭", image: "/images/cat-wayang.jpg" },
+  { id: 7, name: "Keramik & Gerabah", slug: "keramik-gerabah", icon: "🏺", image: "/images/cat-keramik.jpg" },
+  { id: 8, name: "Tas & Aksesoris", slug: "tas-aksesoris", icon: "👜", image: "/images/cat-tas.jpg" },
+  { id: 9, name: "Lukisan", slug: "lukisan", icon: "🎨", image: "/images/cat-lukisan.jpg" },
+  { id: 10, name: "Lainnya", slug: "lainnya", icon: "✨", image: "/images/cat-lainnya.jpg" },
 ];
 
 export const PRODUCTS = [

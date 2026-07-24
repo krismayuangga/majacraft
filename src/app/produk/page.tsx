@@ -29,7 +29,7 @@ type ProductItem = {
   image: string; images: string[]; category: string;
   seller: { name: string; avatar: string; location: string; rating: number; sold: number };
   rating: number; reviews: number; sold: number;
-  isPhygital: boolean; isVerified: boolean; isFeatured: boolean; isCurated: boolean;
+  isPhygital: boolean; isVerified: boolean; isFeatured: boolean; isModerated: boolean;
   hasCertificate: boolean; certificateId: string; stock: number;
   material: string; dimensions: string; weight: string; origin: string;
   description: string; tags: string[];
@@ -111,7 +111,7 @@ function ProdukPageContent() {
           rating: Number(p.rating??5), reviews: Number(p.reviewCount??0), sold: Number(p.soldCount??0),
           isPhygital: Boolean(p.hasCertificate), isVerified: Boolean((p.store as {isVerified:boolean})?.isVerified),
           isFeatured: Boolean(p.isFeatured), hasCertificate: Boolean(p.hasCertificate),
-          isCurated: Boolean(p.isCurated), isSoldOffline: Boolean(p.isSoldOffline),
+          isModerated: Boolean(p.isModerated), isSoldOffline: Boolean(p.isSoldOffline),
           certificateId: String(p.certificateId??""), stock: Number(p.stock??1),
           material: String(p.material??""), dimensions: String(p.dimensions??""),
           weight: p.weight?`${p.weight} gram`:"", origin: String(p.origin??""),

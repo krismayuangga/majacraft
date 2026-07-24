@@ -10,23 +10,70 @@ import {
   BookOpen, Plus, Edit, Eye, Calendar, ChevronDown,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/data";
+import { useModernDialog } from "@/components/ui/modern-dialog";
 
-type Stats = { totalUsers:number; totalSellers:number; totalProducts:number; totalOrders:number; platformFeeCollected:number; pendingProducts:number; pendingKyc:number; categories:{id:string;name:string;icon?:string;_count:{products:number}}[]; ordersByStatus:{status:string;_count:{id:number}}[] };
+type Stats = { totalUsers:number; totalSellers:number; totalProducts:number; totalOrders:number; platformFeeCollected:number; rejectedProducts:number; pendingKyc:number; categories:{id:string;name:string;icon?:string;_count:{products:number}}[]; ordersByStatus:{status:string;_count:{id:number}}[] };
 type User = { id:string; name:string; email:string; role:string; status:string; kycStatus:string; kycKtpUrl?:string|null; kycSelfieUrl?:string|null; kycNik?:string|null; createdAt:string; image?:string; store?:{name:string;isVerified:boolean}|null; _count:{orders:number} };
-type Product = { id:string; name:string; slug:string; price:number; createdAt:string; isActive:boolean; isFeatured:boolean; isFlashSale:boolean; isCurated:boolean; hasCertificate:boolean; certificateId?:string|null; rejectionReason?:string|null; images:{url:string}[]; store:{name:string}; category:{name:string} };
+type Product = { id:string; name:string; slug:string; price:number; createdAt:string; isActive:boolean; isFeatured:boolean; isFlashSale:boolean; isModerated:boolean; hasCertificate:boolean; certificateId?:string|null; rejectionReason?:string|null; images:{url:string}[]; store:{name:string}; category:{name:string} };
 type Order = { id:string; orderNumber:string; status:string; total:number; createdAt:string; user:{name:string; email:string}; items:{productName:string; product:{store:{name:string}}}[]; address:{city:string;province:string}|null };
 type StoreItem = { id:string; name:string; slug:string; province:string; city?:string; isVerified:boolean; isActive:boolean; createdAt:string; user:{name:string;email:string;kycStatus:string}; _count:{products:number} };
+type DisputeItem = {
+  id:string;
+  disputeNumber:string;
+  reason:string;
+  requestedAction:string;
+  status:string;
+  resolution?:string|null;
+  refundAmount?:number|null;
+  createdAt:string;
+  assignedAdminId?:string|null;
+  assignedAdmin?:{name:string}|null;
+  order:{id:string;orderNumber:string;total:number;paymentRef?:string|null};
+  buyer:{id:string;name:string;email:string;image?:string|null};
+  seller:{id:string;name:string;email:string;image?:string|null};
+  _count:{messages:number};
+};
 
 const ORDER_LABEL:Record<string,string> = { PENDING_PAYMENT:"Menunggu Bayar", PROCESSING:"Diproses", SHIPPED:"Dikirim", DELIVERED:"Diterima", COMPLETED:"Selesai", CANCELLED:"Dibatalkan", REFUNDED:"Refund" };
 const ORDER_COLOR:Record<string,string> = { PENDING_PAYMENT:"bg-yellow-100 text-yellow-700 border-yellow-200", PROCESSING:"bg-blue-100 text-blue-700 border-blue-200", SHIPPED:"bg-purple-100 text-purple-700 border-purple-200", DELIVERED:"bg-teal-100 text-teal-700 border-teal-200", COMPLETED:"bg-green-100 text-green-700 border-green-200", CANCELLED:"bg-red-100 text-red-700 border-red-200" };
 const KYC_COLOR:Record<string,string> = { UNVERIFIED:"text-muted-foreground", PENDING:"text-yellow-500", VERIFIED:"text-green-500", REJECTED:"text-red-500" };
+const DISPUTE_STATUS_LABEL:Record<string,string> = {
+  PENDING_SELLER:"Menunggu Penjual",
+  SELLER_RESPONDED:"Penjual Merespons",
+  IN_MEDIATION:"Dalam Mediasi",
+  REFUND_PENDING:"Refund Diproses",
+  REFUND_FAILED:"Refund Gagal",
+  RESOLVED:"Selesai",
+  CANCELLED:"Dibatalkan",
+  CLOSED:"Ditutup",
+};
+const DISPUTE_STATUS_COLOR:Record<string,string> = {
+  PENDING_SELLER:"bg-yellow-100 text-yellow-700 border-yellow-200",
+  SELLER_RESPONDED:"bg-blue-100 text-blue-700 border-blue-200",
+  IN_MEDIATION:"bg-purple-100 text-purple-700 border-purple-200",
+  REFUND_PENDING:"bg-sky-100 text-sky-700 border-sky-200",
+  REFUND_FAILED:"bg-red-100 text-red-700 border-red-200",
+  RESOLVED:"bg-green-100 text-green-700 border-green-200",
+  CANCELLED:"bg-red-100 text-red-700 border-red-200",
+  CLOSED:"bg-gray-100 text-gray-700 border-gray-200",
+};
+const DISPUTE_REASON_LABEL:Record<string,string> = {
+  NOT_RECEIVED:"Barang tidak diterima",
+  WRONG_ITEM:"Barang tidak sesuai",
+  DAMAGED:"Barang rusak/cacat",
+  INCOMPLETE:"Barang kurang",
+  COUNTERFEIT:"Produk palsu/tidak autentik",
+  NOT_AS_DESCRIBED:"Tidak sesuai deskripsi",
+  OTHER:"Lainnya",
+};
 
 const MENU = [
   { id:"ringkasan", label:"Ringkasan", icon:LayoutDashboard },
   { id:"pengguna", label:"Pengguna", icon:Users },
   { id:"kyc", label:"Verifikasi KYC", icon:UserCheck, badge:true },
-  { id:"kurasi", label:"Kurasi Produk", icon:Package, badge:true },
+  { id:"kurasi", label:"Moderasi Produk", icon:Package, badge:true },
   { id:"sertifikat", label:"Sertifikat Digital", icon:BadgeCheck, badge:true },
+  { id:"komplain", label:"Komplain & Sengketa", icon:AlertCircle, badge:true },
   { id:"pesanan", label:"Pesanan", icon:ShoppingBag },
   { id:"toko", label:"Toko", icon:Store },
   { id:"keuangan", label:"Keuangan", icon:DollarSign },
@@ -142,6 +189,7 @@ export default function AdminPage() {
   const [nftGenerating, setNftGenerating] = useState<string|null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [stores, setStores] = useState<StoreItem[]>([]);
+  const [disputes, setDisputes] = useState<DisputeItem[]>([]);
   const [busy, setBusy] = useState(false);
   // filters
   const [uSearch, setUSearch] = useState("");
@@ -150,6 +198,8 @@ export default function AdminPage() {
   const [oStatus, setOStatus] = useState("");
   const [sSearch, setSSearch] = useState("");
   const [sVerified, setSVerified] = useState("");
+  const [disputeStatus, setDisputeStatus] = useState("all");
+  const dialog = useModernDialog();
 
   // Role check
   useEffect(() => {
@@ -189,11 +239,15 @@ export default function AdminPage() {
           const q = new URLSearchParams({...(sSearch && {search:sSearch}), ...(sVerified && {verified:sVerified})});
           const d = await apiFetch(`/api/admin/stores?${q}`);
           setStores(d?.stores ?? []);
+        } else if (tab === "komplain") {
+          const q = new URLSearchParams({ ...(disputeStatus && { status: disputeStatus }), limit: "100" });
+          const d = await apiFetch(`/api/admin/disputes?${q}`);
+          setDisputes(d?.disputes ?? []);
         }
       } catch(e) { console.error(e); } finally { setBusy(false); }
     };
     load();
-  }, [tab, roleCheck, pFilter]); // eslint-disable-line
+  }, [tab, roleCheck, pFilter, disputeStatus]); // eslint-disable-line
 
   const reloadCurrent = async () => {
     setBusy(true);
@@ -204,21 +258,85 @@ export default function AdminPage() {
       else if (tab === "sertifikat") { const d = await apiFetch(`/api/admin/products?status=all&limit=100`); setNftProducts(d?.products??[]); }
       else if (tab === "pesanan") { const q = new URLSearchParams({...(oStatus&&{status:oStatus})}); const d = await apiFetch(`/api/admin/orders?${q}`); setOrders(d?.orders??[]); }
       else if (tab === "toko") { const q = new URLSearchParams({...(sSearch&&{search:sSearch}), ...(sVerified&&{verified:sVerified})}); const d = await apiFetch(`/api/admin/stores?${q}`); setStores(d?.stores??[]); }
+      else if (tab === "komplain") { const q = new URLSearchParams({ ...(disputeStatus&&{status:disputeStatus}), limit:"100" }); const d = await apiFetch(`/api/admin/disputes?${q}`); setDisputes(d?.disputes??[]); }
     } catch(e) { console.error(e); } finally { setBusy(false); }
   };
 
-  const approveProduct = async (id:string) => { await fetch(`/api/admin/products/${id}/approve`,{method:"POST",credentials:"include"}); setProducts(p=>p.filter(x=>x.id!==id)); setStats(s=>s?{...s,pendingProducts:Math.max(0,s.pendingProducts-1)}:s); };
+  const assignDispute = async (id: string) => {
+    const res = await fetch(`/api/admin/disputes/${id}/assign`, { method: "POST", credentials: "include" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      await dialog.alert(d.error ?? "Gagal assign mediator");
+      return;
+    }
+    reloadCurrent();
+  };
+
+  const checkRefundStatusNow = async (dispute: DisputeItem) => {
+    const res = await fetch(`/api/payment/check/${dispute.order.id}`, {
+      method: "GET",
+      credentials: "include",
+    });
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      await dialog.alert(json.error ?? "Gagal cek status refund");
+      return;
+    }
+
+    const latestStatus = json?.data?.status ?? "UNKNOWN";
+    await dialog.alert(
+      `Status pesanan terbaru: ${latestStatus}${
+        latestStatus === "REFUNDED"
+          ? "\nRefund sudah terkonfirmasi dan sengketa akan disinkronkan otomatis."
+          : ""
+      }`
+    );
+    await reloadCurrent();
+  };
+
+  const confirmManualRefund = async (dispute: DisputeItem) => {
+    const amount = dispute.refundAmount ?? dispute.order.total;
+    const confirm = await dialog.confirm(
+      `Konfirmasi transfer refund manual sebesar Rp ${amount.toLocaleString("id-ID")} ke pembeli "${dispute.buyer.name}" (${dispute.buyer.email})?\n\nPastikan transfer sudah dilakukan sebelum mengkonfirmasi.`
+    );
+    if (!confirm) return;
+
+    const note = await dialog.prompt({
+      title: "Catatan Transfer",
+      message: "Catatan bukti transfer (opsional, misal: No. ref transfer bank):",
+      defaultValue: "",
+      placeholder: "contoh: Ref 20260723-001",
+    });
+    if (note === null) return;
+
+    const res = await fetch(`/api/admin/disputes/${dispute.id}/confirm-refund`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ adminNote: note || "Transfer manual dikonfirmasi admin" }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await dialog.alert(json.error ?? "Gagal mengkonfirmasi transfer");
+      return;
+    }
+    await dialog.alert("✅ Transfer berhasil dikonfirmasi. Dispute selesai.");
+    reloadCurrent();
+  };
+
+  const approveProduct = async (id:string) => { await fetch(`/api/admin/products/${id}/approve`,{method:"POST",credentials:"include"}); setProducts(p=>p.filter(x=>x.id!==id)); setStats(s=>s?{...s,rejectedProducts:Math.max(0,s.rejectedProducts-1)}:s); };
   const rejectProduct = async (id:string, reason:string) => {
     const res = await fetch(`/api/admin/products/${id}/reject`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason})});
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
-      alert(d.error ?? "Gagal menolak produk. Coba lagi.");
+      await dialog.alert(d.error ?? "Gagal menolak produk. Coba lagi.");
       return;
     }
     // Reload list dari DB — reflect state terbaru
     reloadCurrent();
   };
-  const curateProduct = async (id:string) => { await fetch(`/api/admin/products/${id}/curate`,{method:"POST",credentials:"include"}); setProducts(p=>p.map(x=>x.id===id?{...x,isCurated:true}:x)); };
+  const curateProduct = async (id:string) => { await fetch(`/api/admin/products/${id}/moderate`,{method:"POST",credentials:"include"}); setProducts(p=>p.map(x=>x.id===id?{...x,isModerated:true}:x)); };
   const markPhygital = async (id:string, current:boolean) => {
     const res = await fetch(`/api/admin/products/${id}/mark-phygital`,{method:"POST",credentials:"include"});
     if (res.ok) setProducts(p=>p.map(x=>x.id===id?{...x,hasCertificate:!current}:x));
@@ -229,15 +347,15 @@ export default function AdminPage() {
     const d = await res.json();
     if (res.ok) {
       setNftProducts(p=>p.map(x=>x.id===id?{...x,certificateId:d.data?.certificateId}:x));
-      alert(`✅ NFT berhasil diterbitkan!\nCertificate ID: ${d.data?.certificateId}`);
-    } else { alert(d.error ?? "Gagal generate NFT"); }
+      await dialog.alert(`✅ NFT berhasil diterbitkan!\nCertificate ID: ${d.data?.certificateId}`);
+    } else { await dialog.alert(d.error ?? "Gagal generate NFT"); }
     setNftGenerating(null);
   };
   const deleteProduct = async (id:string, name:string) => {
-    if (!confirm(`Hapus produk "${name}" secara permanen? Tindakan ini tidak bisa dibatalkan.`)) return;
+    if (!(await dialog.confirm(`Hapus produk "${name}" secara permanen? Tindakan ini tidak bisa dibatalkan.`))) return;
     const res = await fetch(`/api/admin/products/${id}`,{method:"DELETE",credentials:"include"});
     if (res.ok) { setProducts(p=>p.filter(x=>x.id!==id)); }
-    else { const d = await res.json(); alert(d.error ?? "Gagal menghapus produk"); }
+    else { const d = await res.json(); await dialog.alert(d.error ?? "Gagal menghapus produk"); }
   };
   const [rejectModal, setRejectModal] = React.useState<{id:string;name:string}|null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
@@ -280,7 +398,7 @@ export default function AdminPage() {
               <button key={m.id} onClick={()=>setTab(m.id)} className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap ${tab===m.id?"bg-red-700 text-white":"bg-card border border-border text-muted-foreground"}`}>
                 <m.icon className="w-3.5 h-3.5"/>{m.label}
                 {m.id==="kyc"&&(stats?.pendingKyc??0)>0&&<span className="bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.pendingKyc}</span>}
-                {m.id==="kurasi"&&(stats?.pendingProducts??0)>0&&<span className="bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.pendingProducts}</span>}
+                {m.id==="kurasi"&&(stats?.rejectedProducts??0)>0&&<span className="bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.rejectedProducts}</span>}
               </button>
             ))}
           </div>
@@ -292,7 +410,7 @@ export default function AdminPage() {
               <button key={m.id} onClick={()=>setTab(m.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${tab===m.id?"bg-red-900/20 text-red-400 font-medium border border-red-800/30":"text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
                 <m.icon className="w-4 h-4"/>{m.label}
                 {m.id==="kyc"&&(stats?.pendingKyc??0)>0&&<span className="ml-auto bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.pendingKyc}</span>}
-                {m.id==="kurasi"&&(stats?.pendingProducts??0)>0&&<span className="ml-auto bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.pendingProducts}</span>}
+                {m.id==="kurasi"&&(stats?.rejectedProducts??0)>0&&<span className="ml-auto bg-yellow-500 text-white text-[9px] px-1.5 rounded-full">{stats?.rejectedProducts}</span>}
               </button>
             ))}
           </aside>
@@ -303,7 +421,7 @@ export default function AdminPage() {
             {tab==="ringkasan"&&(
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[{l:"Total Pengguna",v:stats?.totalUsers??0,sub:`${stats?.totalSellers??0} Seniman`,i:Users},{l:"Fee Platform",v:formatRupiah(stats?.platformFeeCollected??0),sub:"Terkumpul",i:DollarSign},{l:"Produk Aktif",v:stats?.totalProducts??0,sub:`${stats?.pendingProducts??0} pending kurasi`,i:Package},{l:"Total Pesanan",v:stats?.totalOrders??0,sub:"Semua waktu",i:ShoppingBag},{l:"KYC Pending",v:stats?.pendingKyc??0,sub:"Menunggu verif",i:UserCheck},{l:"Produk Pending",v:stats?.pendingProducts??0,sub:"Perlu dikurasi",i:AlertCircle}].map(s=>(
+                  {[{l:"Total Pengguna",v:stats?.totalUsers??0,sub:`${stats?.totalSellers??0} Seniman`,i:Users},{l:"Fee Platform",v:formatRupiah(stats?.platformFeeCollected??0),sub:"Terkumpul",i:DollarSign},{l:"Produk Aktif",v:stats?.totalProducts??0,sub:`${stats?.rejectedProducts??0} ditolak`,i:Package},{l:"Total Pesanan",v:stats?.totalOrders??0,sub:"Semua waktu",i:ShoppingBag},{l:"KYC Pending",v:stats?.pendingKyc??0,sub:"Menunggu verif",i:UserCheck},{l:"Produk Ditolak",v:stats?.rejectedProducts??0,sub:"Perlu perbaikan",i:AlertCircle}].map(s=>(
                     <div key={s.l} className="p-4 rounded-xl border border-border bg-card">
                       <div className="flex items-center justify-between mb-2"><p className="text-xs text-muted-foreground">{s.l}</p><s.i className="w-4 h-4 text-amber-600"/></div>
                       <p className="text-xl font-bold text-foreground">{!stats?"...":s.v}</p>
@@ -419,7 +537,7 @@ export default function AdminPage() {
                         </div>
                         {/* Aksi */}
                         <div className="flex gap-2 pt-1">
-                          <button onClick={()=>{ patchUser(u.id,{kycStatus:"VERIFIED"}); if(confirm("Setujui KYC dan jadikan seniman?")){patchUser(u.id,{kycStatus:"VERIFIED",role:"SELLER"})}}} 
+                          <button onClick={async ()=>{ if (await dialog.confirm("Setujui KYC dan jadikan seniman?")) { patchUser(u.id,{kycStatus:"VERIFIED",role:"SELLER"}); } }} 
                             className="flex-1 h-9 rounded-lg bg-green-700 hover:bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
                             <UserCheck className="w-3.5 h-3.5"/> Setujui & Jadikan Seniman
                           </button>
@@ -452,13 +570,13 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* KURASI */}
+            {/* MODERATION */}
             {tab==="kurasi"&&(
               <div className="space-y-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="font-semibold text-foreground">Kurasi Produk</h2>
+                  <h2 className="font-semibold text-foreground">Moderasi Produk</h2>
                   <div className="flex gap-2 ml-auto">
-                    {[{v:"pending",l:"Pending"},{v:"active",l:"Aktif"},{v:"all",l:"Semua"}].map(f=>(
+                    {[{v:"pending",l:"Perlu Review"},{v:"needs_fix",l:"Perlu Perbaikan"},{v:"active",l:"Disetujui"},{v:"inactive",l:"Nonaktif"},{v:"all",l:"Semua"}].map(f=>(
                       <button key={f.v} onClick={()=>setPFilter(f.v)} className={`text-xs px-3 h-7 rounded-full border ${pFilter===f.v?"bg-amber-700 text-white border-amber-600":"border-border text-muted-foreground"}`}>{f.l}</button>
                     ))}
                     <button onClick={reloadCurrent} className="p-1.5 text-muted-foreground hover:text-foreground"><RefreshCw className="w-4 h-4"/></button>
@@ -479,13 +597,14 @@ export default function AdminPage() {
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-semibold text-sm text-foreground line-clamp-1">{p.name}</h3>
                               <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {p.isCurated&&<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">✓ Dikurasi</span>}
+                                {p.isModerated&&<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">✓ Disetujui</span>}
                                 {p.hasCertificate && !p.certificateId && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-300">🎥 Phygital Pending</span>}
                                 {p.certificateId && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-700 text-white border border-purple-600">✨ NFT Terbit</span>}
-                                {p.rejectionReason && !p.isCurated && p.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-300">🔄 Diperbarui</span>}
-                                {p.rejectionReason && !p.isCurated && !p.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300">❌ Ditolak</span>}
+                                {p.isModerated && p.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">✓ Disetujui</span>}
+                                {!p.isModerated && !p.rejectionReason && p.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300">⏳ Perlu Review</span>}
+                                {p.rejectionReason && !p.isModerated && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-300">📝 Perlu Perbaikan</span>}
+                                {!p.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300">❌ Nonaktif</span>}
                                 {p.isFeatured&&<span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300">⭐ Pilihan</span>}
-                                {!p.isActive&&!p.rejectionReason?<span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-300">Pending</span>:p.isActive&&!p.isCurated?<span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-300">Aktif</span>:p.isActive&&p.isCurated?<span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">Aktif</span>:null}
                               </div>
                             </div>
                             <p className="text-xs text-amber-600 font-semibold mt-0.5">{formatRupiah(p.price)}</p>
@@ -493,10 +612,29 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-3 flex-wrap">
-                          {!p.isCurated&&<>
-                            <button onClick={()=>curateProduct(p.id)} className="flex-1 h-8 rounded-lg bg-green-700 hover:bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5"/>Lolos Kurasi</button>
-                            <button onClick={()=>{setRejectModal({id:p.id,name:p.name});setRejectReason("");}} className="h-8 px-4 rounded-lg border border-red-300/50 text-red-500 hover:bg-red-900/10 text-xs flex items-center gap-1"><XCircle className="w-3.5 h-3.5"/>Tolak + Alasan</button>
-                          </>}
+                          {!p.isModerated&&<>
+                            <button onClick={()=>curateProduct(p.id)} className="flex-1 h-8 rounded-lg bg-green-700 hover:bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5"/>Setujui</button>
+                            <button onClick={()=>{setRejectModal({id:p.id,name:p.name});setRejectReason("");}} className="h-8 px-4 rounded-lg border border-orange-400/50 text-orange-500 hover:bg-orange-900/10 text-xs flex items-center gap-1"><XCircle className="w-3.5 h-3.5"/>Kirim Masukan ke Seller</button>
+                          </>
+                          }
+                          {p.isActive && (
+                            <button
+                              onClick={async()=>{ if(await dialog.confirm(`Nonaktifkan produk "${p.name}"? Produk tidak akan muncul di marketplace.`)) { await fetch(`/api/admin/products/${p.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({isActive:false})}); reloadCurrent(); } }}
+                              className="h-8 px-3 rounded-lg border border-red-400/40 text-red-500 hover:bg-red-900/10 text-xs flex items-center gap-1"
+                              title="Nonaktifkan produk"
+                            >
+                              Nonaktifkan
+                            </button>
+                          )}
+                          {!p.isActive && (
+                            <button
+                              onClick={async()=>{ await fetch(`/api/admin/products/${p.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({isActive:true})}); reloadCurrent(); }}
+                              className="h-8 px-3 rounded-lg border border-green-400/40 text-green-500 hover:bg-green-900/10 text-xs flex items-center gap-1"
+                              title="Aktifkan kembali"
+                            >
+                              Aktifkan Kembali
+                            </button>
+                          )}
                           <button
                             onClick={()=>toggleFeatured(p.id, p.isFeatured)}
                             title={p.isFeatured?"Hapus dari Karya Pilihan":"Jadikan Karya Pilihan"}
@@ -549,7 +687,7 @@ export default function AdminPage() {
                     Menunggu Generate NFT ({nftProducts.filter(p=>p.hasCertificate&&!p.certificateId).length})
                   </h3>
                   {nftProducts.filter(p=>p.hasCertificate&&!p.certificateId).length===0
-                    ? <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-xl">Tidak ada produk yang menunggu NFT. Tandai produk sebagai Phygital di tab Kurasi Produk.</p>
+                    ? <p className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-xl">Tidak ada produk yang menunggu NFT. Tandai produk sebagai Phygital di tab Moderasi Produk.</p>
                     : (
                       <div className="space-y-3">
                         {nftProducts.filter(p=>p.hasCertificate&&!p.certificateId).map(p=>(
@@ -607,6 +745,91 @@ export default function AdminPage() {
                     )
                   }
                 </div>
+              </div>
+            )}
+
+            {/* KOMPLAIN & SENGKETA */}
+            {tab==="komplain"&&(
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="font-semibold text-foreground">Komplain & Sengketa</h2>
+                  <div className="flex gap-2 ml-auto">
+                    <select value={disputeStatus} onChange={e=>setDisputeStatus(e.target.value)} className="h-8 px-2 text-xs rounded-lg bg-card border border-border text-foreground focus:outline-none appearance-none">
+                      <option value="all">Semua Status</option>
+                      <option value="PENDING_SELLER">Menunggu Penjual</option>
+                      <option value="SELLER_RESPONDED">Penjual Merespons</option>
+                      <option value="IN_MEDIATION">Dalam Mediasi</option>
+                      <option value="REFUND_PENDING">Refund Diproses</option>
+                      <option value="REFUND_FAILED">Refund Gagal</option>
+                      <option value="RESOLVED">Selesai</option>
+                      <option value="CANCELLED">Dibatalkan</option>
+                    </select>
+                    <button onClick={reloadCurrent} className="h-8 px-3 rounded-lg bg-amber-700 text-white text-xs flex items-center gap-1"><RefreshCw className="w-3 h-3"/>Filter</button>
+                  </div>
+                </div>
+
+                {busy?<div className="h-32 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-amber-600"/></div>:disputes.length===0?<div className="text-center py-12 text-muted-foreground text-sm"><AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-30"/>Belum ada komplain</div>:(
+                  <div className="space-y-3">
+                    {disputes.map(d=>{
+                      const chatUrl = `/pesanan/${d.order.id}/komplain/${d.id}`;
+                      return (
+                        <div key={d.id} className="p-4 rounded-xl border border-border bg-card">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">{d.disputeNumber}</p>
+                              <p className="font-semibold text-foreground text-sm">Order #{d.order.orderNumber}</p>
+                            </div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${DISPUTE_STATUS_COLOR[d.status]??"bg-gray-100 text-gray-700 border-gray-200"}`}>{DISPUTE_STATUS_LABEL[d.status]??d.status}</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs mb-3">
+                            <p className="text-muted-foreground">Pembeli: <span className="text-foreground font-medium">{d.buyer.name}</span></p>
+                            <p className="text-muted-foreground">Penjual: <span className="text-foreground font-medium">{d.seller.name}</span></p>
+                            <p className="text-muted-foreground">Pesan: <span className="text-foreground font-medium">{d._count.messages}</span></p>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground mb-3 space-y-1">
+                            <p>Alasan: <span className="text-foreground">{DISPUTE_REASON_LABEL[d.reason]??d.reason}</span></p>
+                            <p>Aksi diminta: <span className="text-foreground">{d.requestedAction}</span></p>
+                            <p>Dibuat: <span className="text-foreground">{new Date(d.createdAt).toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" })}</span></p>
+                            <p>Mediator: <span className="text-foreground">{d.assignedAdmin?.name ?? "Belum ditugaskan"}</span></p>
+                            {d.status === "REFUND_PENDING" && (
+                              <p className="font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-1 rounded-lg">
+                                💰 Nominal refund: {formatRupiah(d.refundAmount ?? d.order.total)}
+                                {d.order.paymentRef && <span className="font-normal text-muted-foreground ml-2">· Ref iPaymu: {d.order.paymentRef}</span>}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {!d.assignedAdminId && d.status === "IN_MEDIATION" && (
+                              <button onClick={()=>assignDispute(d.id)} className="h-8 px-3 rounded-lg bg-blue-700 hover:bg-blue-600 text-white text-xs font-semibold">Assign ke Saya</button>
+                            )}
+                            {d.status === "REFUND_PENDING" && d.resolution === "REFUND_APPROVED" && (
+                              <button
+                                onClick={() => confirmManualRefund(d)}
+                                className="h-8 px-3 rounded-lg bg-green-700 hover:bg-green-600 text-white text-xs font-semibold flex items-center gap-1.5"
+                              >
+                                ✓ Konfirmasi Transfer Manual Selesai
+                              </button>
+                            )}
+                            {["REFUND_PENDING", "REFUND_FAILED", "IN_MEDIATION", "RESOLVED"].includes(d.status) && (
+                              <button
+                                onClick={() => checkRefundStatusNow(d)}
+                                className="h-8 px-3 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-semibold"
+                              >
+                                Cek Status Refund Sekarang
+                              </button>
+                            )}
+                            <Link href={chatUrl} className="h-8 px-3 rounded-lg border border-border text-muted-foreground hover:bg-muted text-xs flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5"/>Buka Chat
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -788,6 +1011,7 @@ function RuangBudayaAdmin() {
   const [saving, setSaving]           = useState(false);
   const [rbError, setRbError]         = useState("");
   const [filterType, setFilterType]   = useState("ALL");
+  const dialog = useModernDialog();
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -836,7 +1060,7 @@ function RuangBudayaAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus post ini?")) return;
+    if (!(await dialog.confirm("Hapus post ini?"))) return;
     await fetch(`/api/admin/ruang-budaya/${id}`, { method:"DELETE", credentials:"include" });
     fetchPosts();
   };

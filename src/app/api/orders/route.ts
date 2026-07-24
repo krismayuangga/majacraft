@@ -10,6 +10,22 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get("status") ?? undefined;
   const userId = session!.user!.id!;
 
+  // Auto-complete pesanan SHIPPED/DELIVERED > 3 hari (tanpa komplain aktif)
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  await prisma.order.updateMany({
+    where: {
+      userId,
+      OR: [
+        { status: "DELIVERED", deliveredAt: { lt: threeDaysAgo } },
+        { status: "SHIPPED", shippedAt: { lt: threeDaysAgo } },
+      ],
+      disputes: {
+        none: { status: { in: ["PENDING_SELLER", "SELLER_RESPONDED", "IN_MEDIATION", "REFUND_PENDING", "REFUND_FAILED"] } },
+      },
+    },
+    data: { status: "COMPLETED", escrowStatus: "RELEASING", deliveredAt: new Date() },
+  });
+
   // Auto-cancel pesanan PENDING_PAYMENT yang sudah melewati deadline
   await prisma.order.updateMany({
     where: {
@@ -49,6 +65,15 @@ export async function GET(req: NextRequest) {
       },
       address: {
         select: { city: true, province: true },
+      },
+      disputes: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          disputeNumber: true,
+          createdAt: true,
+        },
       },
     },
   });

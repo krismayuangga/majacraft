@@ -55,6 +55,45 @@ enum EscrowStatus {
   REFUNDED
 }
 
+enum DisputeReason {
+  NOT_AS_DESCRIBED  // Tidak sesuai deskripsi
+  DAMAGED           // Rusak/cacat
+  INCOMPLETE        // Tidak lengkap
+  NOT_RECEIVED      // Tidak diterima
+  WRONG_ITEM        // Barang salah
+  FAKE_PRODUCT      // Produk palsu
+  OTHER             // Lainnya
+}
+
+enum DisputeAction {
+  REFUND_FULL       // Refund penuh
+  REFUND_PARTIAL    // Refund sebagian
+  REPLACEMENT       // Ganti barang
+  RETURN_REFUND     // Retur + refund
+  REPAIR            // Perbaikan
+}
+
+enum DisputeStatus {
+  PENDING_SELLER    // Menunggu response seller
+  SELLER_RESPONDED  // Seller sudah respond
+  IN_MEDIATION      // Eskalasi ke admin
+  REFUND_PENDING    // Refund sedang diproses gateway
+  REFUND_FAILED     // Refund gagal diproses gateway
+  RESOLVED          // Selesai
+  CLOSED            // Ditutup
+  CANCELLED         // Dibatalkan buyer
+}
+
+enum DisputeResolution {
+  REFUND_APPROVED       // Refund disetujui
+  REFUND_REJECTED       // Refund ditolak
+  REPLACEMENT_SENT      // Ganti barang dikirim
+  RETURN_APPROVED       // Retur disetujui
+  CLOSED_NO_ISSUE       // Ditutup tidak ada masalah
+  CLOSED_RESOLVED       // Ditutup sudah selesai
+  CLOSED_BUYER_FAULT    // Ditutup kesalahan buyer
+}
+
 // ─── AUTH & USERS ─────────────────────────────────────────────────────────
 
 model User {
@@ -86,9 +125,16 @@ model User {
   addresses     Address[]
   chats         ChatParticipant[]
   notifications Notification[]
+  pushDevices   PushDevice[]
   otpCodes      OtpCode[]
   wishlists     Wishlist[]
   culturalPosts CulturalPost[]
+  
+  // Dispute relations
+  disputesAsBuyer  Dispute[] @relation("DisputeBuyer")
+  disputesAsSeller Dispute[] @relation("DisputeSeller")
+  disputesAsAdmin  Dispute[] @relation("DisputeAdmin")
+  disputeMessages  DisputeMessage[]
 
   @@map("users")
 }
@@ -189,13 +235,13 @@ model Product {
   price         Int
   originalPrice Int?
   stock         Int      @default(1)
-  isActive      Boolean  @default(true)   // langsung publish saat upload
+  isActive      Boolean  @default(true)   // auto-approved, admin can reject if harmful
   isFeatured    Boolean   @default(false)
   isFlashSale   Boolean   @default(false)
-  isCurated     Boolean   @default(false) // sudah melalui review tim
-  curatedAt     DateTime?
-  rejectionReason String? // alasan penolakan dari admin
-  isSoldOffline Boolean   @default(false) // terjual di luar platform
+  isModerated   Boolean   @default(true) // passed moderation (not rejected)
+  moderatedAt   DateTime?
+  rejectionReason String? // reason if rejected by moderator
+  isSoldOffline Boolean   @default(false) // sold outside platform
   soldOfflineAt DateTime?
   flashSalePrice Int?
   material      String?
@@ -306,6 +352,7 @@ model Order {
   reviews          Review[]
   chats            Chat[]
   certificate      Certificate?
+  disputes         Dispute[]
 
   @@map("orders")
 }
@@ -432,6 +479,21 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model PushDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  platform    String?
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("push_devices")
 }
 
 model PlatformSetting {
@@ -561,4 +623,92 @@ model CulturalRsvp {
 
   @@unique([postId, email])
   @@map("cultural_rsvps")
+}
+
+// ─── DISPUTE RESOLUTION ───────────────────────────────────────────────────
+
+model Dispute {
+  id              String              @id @default(cuid())
+  disputeNumber   String              @unique // DSP-202607-XXXXX
+  orderId         String
+  orderItemId     String?             // specific item (optional)
+  buyerId         String
+  sellerId        String
+  
+  // Complaint Details
+  reason          DisputeReason
+  description     String              @db.Text
+  evidenceUrls    String[]            // array foto bukti
+  requestedAction DisputeAction
+  
+  // Status & Timeline
+  status          DisputeStatus       @default(PENDING_SELLER)
+  
+  // Seller Response
+  sellerResponse  String?             @db.Text
+  sellerAgreed    Boolean?
+  sellerRespondedAt DateTime?
+  
+  // Admin Mediation
+  assignedAdminId String?
+  adminNotes      String?             @db.Text
+  
+  // Resolution
+  resolution      DisputeResolution?
+  resolutionNotes String?             @db.Text
+  resolvedAt      DateTime?
+  resolvedBy      String?             // userId of resolver
+  
+  // Refund Details
+  refundAmount    Int?
+  refundedAt      DateTime?
+
+  // Return Logistics (for return-before-refund flow)
+  returnCourier        String?
+  returnTrackingNumber String?
+  returnShippingPayer  String?
+  returnShippedAt      DateTime?
+  returnReceivedAt     DateTime?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  order           Order               @relation(fields: [orderId], references: [id])
+  buyer           User                @relation("DisputeBuyer", fields: [buyerId], references: [id])
+  seller          User                @relation("DisputeSeller", fields: [sellerId], references: [id])
+  assignedAdmin   User?               @relation("DisputeAdmin", fields: [assignedAdminId], references: [id])
+  messages        DisputeMessage[]
+  timeline        DisputeTimeline[]
+  
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id          String   @id @default(cuid())
+  disputeId   String
+  senderId    String
+  senderRole  Role     // BUYER, SELLER, or ADMIN
+  message     String   @db.Text
+  attachments String[] // array foto/dokumen
+  isSystemMsg Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  dispute     Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender      User     @relation(fields: [senderId], references: [id])
+  
+  @@map("dispute_messages")
+}
+
+model DisputeTimeline {
+  id          String   @id @default(cuid())
+  disputeId   String
+  action      String   // "created", "seller_responded", "escalated", "admin_joined", "resolved"
+  description String   @db.Text
+  actorId     String?  // user who did the action
+  metadata    Json?    // additional data
+  createdAt   DateTime @default(now())
+  
+  dispute     Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  
+  @@map("dispute_timeline")
 }

@@ -2,9 +2,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, err, requireAdmin } from "@/lib/api-helpers";
 import { createNotification } from "@/lib/notifications";
-import { sendEmail, buildProductCuratedEmail } from "@/lib/email";
+import { sendEmail, buildProductModeratedEmail } from "@/lib/email";
 
-// POST /api/admin/products/[id]/curate — admin setujui kurasi
+// POST /api/admin/products/[id]/moderate — admin approve moderation (manually verify if needed)
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin();
   if (error) return error;
@@ -18,15 +18,15 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   await prisma.product.update({
     where: { id },
-    data: { isCurated: true, curatedAt: new Date(), isActive: true, rejectionReason: null },
+    data: { isModerated: true, moderatedAt: new Date(), isActive: true, rejectionReason: null },
   });
 
   // In-app notif
   await createNotification({
     userId: product.store.userId,
-    type: "product_curated",
-    title: "Karya Lolos Kurasi! ✅",
-    body: `Karya "${product.name}" telah lolos kurasi tim MajaCraft. Selamat, karya Anda sudah terverifikasi!`,
+    type: "product_moderated",
+    title: "Produk Disetujui! ✅",
+    body: `Produk "${product.name}" telah disetujui dan aktif di marketplace.`,
     data: { productId: product.id, productSlug: product.slug },
   });
 
@@ -35,10 +35,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (sellerEmail) {
     sendEmail({
       to: sellerEmail,
-      subject: `[MajaCraft] Karya Anda Lolos Kurasi — ${product.name}`,
-      html: buildProductCuratedEmail(product.name, product.slug),
-    }).catch(e => console.error("[email curate]", e));
+      subject: `[MajaCraft] Produk Disetujui — ${product.name}`,
+      html: buildProductModeratedEmail(product.name, product.slug),
+    }).catch(e => console.error("[email moderate]", e));
   }
 
-  return ok({ message: "Produk lolos kurasi" });
+  return ok({ message: "Produk disetujui" });
 }

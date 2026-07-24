@@ -18,18 +18,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (!product) return err("Produk tidak ditemukan", 404);
 
+  // Produk TETAP PUBLIK — hanya dikirim masukan/notifikasi ke seller untuk perbaikan
+  // Admin bisa nonaktifkan produk secara manual jika ada pelanggaran serius
   await prisma.product.update({
     where: { id },
-    data: { isActive: false, isCurated: false, rejectionReason: reason || null },
+    data: { isModerated: false, moderatedAt: new Date(), rejectionReason: reason || null },
   });
 
   await createNotification({
     userId: product.store.userId,
     type: "product_rejected",
-    title: "Karya Perlu Perbaikan ⚠️",
+    title: "Produk Ditolak ⚠️",
     body: reason
-      ? `Karya "${product.name}" perlu diperbaiki: ${reason}`
-      : `Karya "${product.name}" tidak lolos kurasi. Silakan perbaiki dan upload ulang.`,
+      ? `Produk "${product.name}" ditolak: ${reason}`
+      : `Produk "${product.name}" tidak sesuai panduan platform. Silakan perbaiki dan upload ulang.`,
     data: { productId: product.id, productSlug: product.slug, reason },
   });
 

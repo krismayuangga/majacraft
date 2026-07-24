@@ -170,7 +170,8 @@ export async function trackWaybill(params: {
   if (!courier) throw new Error("Kurir tidak valid untuk tracking");
 
   const formData = new URLSearchParams();
-  formData.append("airwaybill", waybill);
+  // RajaOngkir v1 track endpoint expects "awb" for waybill number.
+  formData.append("awb", waybill);
   formData.append("courier", courier);
 
   const res = await fetch(`${BASE_URL}/track/waybill`, {

@@ -5,14 +5,15 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Package, Truck, CheckCircle2, XCircle, Clock,
-  ChevronRight, Star, MessageCircle, Search, Loader2, RefreshCw,
+  ChevronRight, Star, MessageCircle, Search, Loader2, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/data";
+import { useModernDialog } from "@/components/ui/modern-dialog";
 
 const STATUS_CONFIG = {
   PENDING_PAYMENT: { label: "Belum Dibayar",      color: "text-yellow-500", bg: "bg-yellow-900/20 border-yellow-800/30",  icon: Clock        },
   PROCESSING:      { label: "Diproses Seniman",   color: "text-blue-400",   bg: "bg-blue-900/20 border-blue-800/30",      icon: Package      },
-  SHIPPED:         { label: "Dalam Pengiriman",   color: "text-purple-400", bg: "bg-purple-900/20 border-purple-800/30",  icon: Truck        },
+  SHIPPED:         { label: "Dalam Pengiriman",   color: "text-amber-700", bg: "bg-amber-900/10 border-amber-700/30",    icon: Truck        },
   DELIVERED:       { label: "Diterima",           color: "text-teal-400",   bg: "bg-teal-900/20 border-teal-800/30",      icon: CheckCircle2 },
   COMPLETED:       { label: "Selesai",            color: "text-green-400",  bg: "bg-green-900/20 border-green-800/30",    icon: CheckCircle2 },
   CANCELLED:       { label: "Dibatalkan",         color: "text-red-400",    bg: "bg-red-900/20 border-red-800/30",        icon: XCircle      },
@@ -31,6 +32,7 @@ type Order = {
   total: number; courierName?: string; courierService?: string;
   trackingNumber?: string; estimatedArrival?: string;
   paymentDeadline?: string | null;
+  disputes?: { id: string; status: string; disputeNumber: string; createdAt: string }[];
   items: OrderItem[];
 };
 
@@ -39,6 +41,7 @@ const TABS: { key: OrderStatus | "semua"; label: string }[] = [
   { key: "PENDING_PAYMENT", label: "Belum Bayar"  },
   { key: "PROCESSING",      label: "Diproses"     },
   { key: "SHIPPED",         label: "Dikirim"      },
+  { key: "DELIVERED",       label: "Diterima"     },
   { key: "COMPLETED",       label: "Selesai"      },
   { key: "CANCELLED",       label: "Dibatalkan"   },
 ];
@@ -53,6 +56,7 @@ export default function PesananPage() {
   const [activeTab, setActiveTab] = useState<OrderStatus | "semua">("semua");
   const [search, setSearch] = useState("");
   const [payingId, setPayingId] = useState<string | null>(null);
+  const dialog = useModernDialog();
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -80,7 +84,7 @@ export default function PesananPage() {
       if (data.data?.url) {
         window.location.href = data.data.url;
       } else {
-        alert(data.error ?? "Gagal membuat pembayaran. Silakan coba lagi.");
+        await dialog.alert(data.error ?? "Gagal membuat pembayaran. Silakan coba lagi.");
       }
     } finally {
       setPayingId(null);
@@ -174,6 +178,7 @@ export default function PesananPage() {
           {filtered.map((order) => {
             const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.CANCELLED;
             const StatusIcon = cfg.icon;
+            const existingDispute = order.disputes?.find((d) => d.status !== "CANCELLED");
             return (
               <div key={order.id} className="rounded-xl border border-border bg-card overflow-hidden">
                 {/* Header */}
@@ -213,13 +218,13 @@ export default function PesananPage() {
 
                 {/* Tracking */}
                 {order.status === "SHIPPED" && order.trackingNumber && (
-                  <div className="mx-4 mb-3 p-3 rounded-lg bg-purple-900/10 border border-purple-800/20 text-xs flex items-center justify-between gap-2">
+                  <div className="mx-4 mb-3 p-3 rounded-lg bg-amber-900/10 border border-amber-700/20 text-xs flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Truck className="w-3.5 h-3.5 text-purple-400" />
-                      <span className="text-purple-300">{order.courierName} {order.courierService} · {order.trackingNumber}</span>
+                      <Truck className="w-3.5 h-3.5 text-amber-700" />
+                      <span className="text-amber-700">{order.courierName} {order.courierService} · {order.trackingNumber}</span>
                     </div>
                     {order.estimatedArrival && (
-                      <span className="text-purple-400 flex-shrink-0">Est. {order.estimatedArrival}</span>
+                      <span className="text-amber-700 flex-shrink-0">Est. {order.estimatedArrival}</span>
                     )}
                   </div>
                 )}
@@ -231,6 +236,12 @@ export default function PesananPage() {
                     <span className="font-bold text-amber-700 text-sm">{formatRupiah(order.total)}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {existingDispute && (
+                      <Link href={`/pesanan/${order.id}/komplain/${existingDispute.id}`}
+                        className="text-xs h-8 px-3 rounded-lg border border-sky-700/30 text-sky-600 hover:bg-sky-900/10 font-medium inline-flex items-center gap-1 transition-colors">
+                        <MessageCircle className="w-3 h-3" /> Masuk Ruang Komplain
+                      </Link>
+                    )}
                     {order.status === "PENDING_PAYMENT" && (
                       <div className="flex items-center gap-2">
                         {order.paymentDeadline && (
@@ -248,7 +259,7 @@ export default function PesananPage() {
                         </button>
                         <button
                           onClick={async () => {
-                            if (!confirm("Batalkan pesanan ini? Stok akan dikembalikan ke penjual.")) return;
+                            if (!(await dialog.confirm("Batalkan pesanan ini? Stok akan dikembalikan ke penjual."))) return;
                             await fetch(`/api/orders/${order.id}/cancel`, { method: "POST", credentials: "include" });
                             fetchOrders();
                           }}
@@ -258,28 +269,62 @@ export default function PesananPage() {
                       </div>
                     )}
                     {order.status === "SHIPPED" && (
-                      <button
-                        onClick={async () => {
-                          await fetch(`/api/orders/${order.id}/confirm`, { method: "POST", credentials: "include" });
-                          fetchOrders();
-                        }}
-                        className="text-xs h-8 px-3 rounded-lg bg-green-700 hover:bg-green-600 text-white font-semibold inline-flex items-center gap-1 transition-colors">
-                        <CheckCircle2 className="w-3 h-3" /> Terima Barang
-                      </button>
+                      <>
+                        <button
+                          onClick={async () => {
+                            await fetch(`/api/orders/${order.id}/confirm`, { method: "POST", credentials: "include" });
+                            fetchOrders();
+                          }}
+                          className="text-xs h-8 px-3 rounded-lg bg-green-700 hover:bg-green-600 text-white font-semibold inline-flex items-center gap-1 transition-colors">
+                          <CheckCircle2 className="w-3 h-3" /> Selesaikan Pesanan
+                        </button>
+                        {!existingDispute && (
+                          <Link href={`/pesanan/${order.id}#komplain`}
+                            className="text-xs h-8 px-3 rounded-lg border border-orange-700/30 text-orange-500 hover:bg-orange-900/10 font-medium inline-flex items-center gap-1 transition-colors">
+                            <AlertCircle className="w-3 h-3" /> Ajukan Komplain
+                          </Link>
+                        )}
+                      </>
+                    )}
+                    {order.status === "DELIVERED" && (
+                      <>
+                        <button
+                          onClick={async () => {
+                            await fetch(`/api/orders/${order.id}/confirm`, { method: "POST", credentials: "include" });
+                            fetchOrders();
+                          }}
+                          className="text-xs h-8 px-3 rounded-lg bg-green-700 hover:bg-green-600 text-white font-semibold inline-flex items-center gap-1 transition-colors">
+                          <CheckCircle2 className="w-3 h-3" /> Selesaikan Pesanan
+                        </button>
+                        {!existingDispute && (
+                          <Link href={`/pesanan/${order.id}#komplain`}
+                            className="text-xs h-8 px-3 rounded-lg border border-orange-700/30 text-orange-500 hover:bg-orange-900/10 font-medium inline-flex items-center gap-1 transition-colors">
+                            <AlertCircle className="w-3 h-3" /> Ajukan Komplain
+                          </Link>
+                        )}
+                      </>
                     )}
                     {order.status === "COMPLETED" && (
-                      <Link href={`/pesanan/${order.id}#ulasan`}
-                        className="text-xs h-8 px-3 rounded-lg border border-amber-700/30 text-amber-600 hover:bg-amber-900/10 font-medium inline-flex items-center gap-1 transition-colors">
-                        <Star className="w-3 h-3" /> Beri Ulasan
-                      </Link>
+                      <>
+                        <Link href={`/pesanan/${order.id}#ulasan`}
+                          className="text-xs h-8 px-3 rounded-lg border border-amber-700/30 text-amber-600 hover:bg-amber-900/10 font-medium inline-flex items-center gap-1 transition-colors">
+                          <Star className="w-3 h-3" /> Beri Ulasan
+                        </Link>
+                        {!existingDispute && (
+                          <Link href={`/pesanan/${order.id}#komplain`}
+                            className="text-xs h-8 px-3 rounded-lg border border-orange-700/30 text-orange-500 hover:bg-orange-900/10 font-medium inline-flex items-center gap-1 transition-colors">
+                            <AlertCircle className="w-3 h-3" /> Ajukan Komplain
+                          </Link>
+                        )}
+                      </>
                     )}
                     <Link href={`/chat?order=${order.id}`}
                       className="text-xs h-8 px-3 rounded-lg border border-border text-muted-foreground hover:border-amber-700/40 hover:text-amber-600 inline-flex items-center gap-1 transition-colors">
                       <MessageCircle className="w-3 h-3" /> Chat
                     </Link>
                     <Link href={`/pesanan/${order.id}`}
-                      className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-amber-700/40 hover:text-amber-600 transition-colors">
-                      <ChevronRight className="w-4 h-4" />
+                      className="h-8 px-3 rounded-lg border border-border inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:border-amber-700/40 hover:text-amber-600 transition-colors">
+                      Detail <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>

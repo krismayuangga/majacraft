@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
 import { sendEmail, buildNewOrderEmailSeller, buildOrderConfirmEmail } from "@/lib/email";
+import { notifyDisputeResolved } from "@/lib/dispute-notifications";
 
 // POST /api/payment/callback — webhook notifikasi dari iPaymu
 // iPaymu mengirim form-data atau JSON POST ke URL ini setelah pembayaran
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
     if (statusLower === "berhasil" || statusLower === "success" || statusLower === "1") {
       orderStatus  = "PROCESSING";
       escrowStatus = "LOCKED";
+    } else if (statusLower === "refund" || statusLower === "3") {
+      orderStatus = "REFUNDED";
+      escrowStatus = "REFUNDED";
     } else if (statusLower === "gagal" || statusLower === "failed" || statusLower === "2") {
       orderStatus  = "CANCELLED";
       escrowStatus = "WAITING";
@@ -52,10 +56,59 @@ export async function POST(req: NextRequest) {
         data: {
           status: orderStatus as never,
           escrowStatus: escrowStatus as never,
+          ...(orderStatus === "REFUNDED" && { paymentStatus: "REFUNDED" as never }),
           ...(trxId && { paymentRef: trxId }),
           ...(orderStatus === "PROCESSING" && { paidAt: new Date() }),
         },
       });
+
+      // Jika callback menandakan refund sukses, sinkronkan dispute refund agar otomatis selesai.
+      if (orderStatus === "REFUNDED") {
+        const refundDispute = await prisma.dispute.findFirst({
+          where: {
+            orderId: referenceId,
+            status: { in: ["REFUND_PENDING", "REFUND_FAILED", "IN_MEDIATION"] },
+            resolution: "REFUND_APPROVED",
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (refundDispute) {
+          await prisma.$transaction(async (tx) => {
+            await tx.dispute.update({
+              where: { id: refundDispute.id },
+              data: {
+                status: "RESOLVED",
+                refundedAt: new Date(),
+                resolvedAt: refundDispute.resolvedAt ?? new Date(),
+                adminNotes: "Refund terkonfirmasi dari callback iPaymu",
+              },
+            });
+
+            await tx.disputeTimeline.create({
+              data: {
+                disputeId: refundDispute.id,
+                action: "refund_confirmed",
+                description: "Refund terkonfirmasi oleh callback iPaymu",
+                actorId: refundDispute.resolvedBy ?? refundDispute.buyerId,
+                metadata: { callbackStatus: status },
+              },
+            });
+
+            await tx.disputeMessage.create({
+              data: {
+                disputeId: refundDispute.id,
+                senderId: refundDispute.resolvedBy ?? refundDispute.buyerId,
+                senderRole: refundDispute.resolvedBy ? "ADMIN" : "BUYER",
+                message: "Refund telah terkonfirmasi otomatis dari iPaymu.",
+                isSystemMsg: true,
+              },
+            });
+          });
+
+          await notifyDisputeResolved(refundDispute.id, "Refund terkonfirmasi dari iPaymu");
+        }
+      }
 
       // Kirim notifikasi & email saat pembayaran sukses
       if (orderStatus === "PROCESSING") {

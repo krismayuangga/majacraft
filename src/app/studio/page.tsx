@@ -12,13 +12,37 @@ import {
 } from "lucide-react";
 import { formatRupiah } from "@/lib/data";
 import AddressForm, { type AddressValue } from "@/components/AddressForm";
+import { useModernDialog } from "@/components/ui/modern-dialog";
 import dynamic from "next/dynamic";
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { ssr: false });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Store = { id: string; name: string; description?: string; province: string; city?: string; district?: string; village?: string; address?: string; postalCode?: string; phone?: string; bankName?: string; bankAccount?: string; bankHolder?: string; logoUrl?: string; bannerUrl?: string; isVerified: boolean; rating: number; totalSold: number };
 type Product = { id: string; name: string; slug: string; price: number; originalPrice?: number | null; stock: number; soldCount: number; viewCount: number; isActive: boolean; hasCertificate: boolean; isFeatured: boolean; isFlashSale: boolean; isSoldOffline: boolean; images: { url: string; isPrimary: boolean }[]; category: { id: string; name: string; slug: string } | null; weight?: number | null; length?: number | null; width?: number | null; height?: number | null; origin?: string | null; description?: string; material?: string | null; tags?: string[]; kondisi?: string | null; };
-type Order = { id: string; orderNumber: string; status: string; total: number; subtotal: number; shippingCost: number; createdAt: string; trackingNumber?: string; courierName?: string; courierService?: string; items: { productName: string; qty: number; price: number; product: { images: { url: string }[] } }[] };
+type Order = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  subtotal: number;
+  shippingCost: number;
+  createdAt: string;
+  trackingNumber?: string;
+  courierName?: string;
+  courierService?: string;
+  disputes?: {
+    id: string;
+    disputeNumber: string;
+    status: string;
+    createdAt: string;
+  }[];
+  items: {
+    productName: string;
+    qty: number;
+    price: number;
+    product: { images: { url: string }[] };
+  }[];
+};
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING_PAYMENT: "bg-yellow-100 text-yellow-700 border-yellow-300",
@@ -623,7 +647,7 @@ export default function StudioPage() {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm("Hapus karya ini?")) return;
+    if (!(await dialog.confirm("Hapus karya ini?"))) return;
     await fetch(`/api/studio/products/${id}`, { method: "DELETE" });
     setProducts(products.filter(p => p.id !== id));
   };
@@ -635,6 +659,7 @@ export default function StudioPage() {
   const [isCourierOverride, setIsCourierOverride] = useState(false);
   const [shipError, setShipError] = useState("");
   const [shippingLoading, setShippingLoading] = useState(false);
+  const dialog = useModernDialog();
 
   const openShipModal = (order: Order) => {
     setShipModal(order);
@@ -649,7 +674,7 @@ export default function StudioPage() {
 
   const toggleSoldOffline = async (p: Product) => {
     if (p.isSoldOffline) {
-      if (!confirm("Batalkan status terjual offline? Produk akan aktif kembali.")) return;
+      if (!(await dialog.confirm("Batalkan status terjual offline? Produk akan aktif kembali."))) return;
       await fetch(`/api/studio/products/${p.id}/sold-offline`, { method: "DELETE" });
       setProducts(prev => prev.map(x => x.id === p.id ? { ...x, isSoldOffline: false } : x));
     } else {
@@ -983,17 +1008,38 @@ export default function StudioPage() {
                   <div className="space-y-3">
                     {orders.map(order => (
                       <div key={order.id} className="p-4 rounded-xl border border-border bg-card">
+                        {(() => {
+                          const activeDispute = order.disputes?.find((d) =>
+                            ["PENDING_SELLER", "SELLER_RESPONDED", "IN_MEDIATION", "REFUND_PENDING", "REFUND_FAILED"].includes(d.status)
+                          );
+                          const latestDispute = order.disputes?.find((d) => d.status !== "CANCELLED");
+                          const disputeForRoom = activeDispute ?? latestDispute;
+
+                          return (
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-xs text-amber-600">{order.orderNumber.slice(-8)}</span>
                               <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>{STATUS_LABELS[order.status] ?? order.status}</span>
+                              {activeDispute && (
+                                <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-orange-100 text-orange-700 border-orange-300">
+                                  Komplain Aktif
+                                </span>
+                              )}
                             </div>
                             <p className="font-medium text-sm text-foreground">{order.items[0]?.productName} {order.items.length > 1 ? `+${order.items.length - 1} lainnya` : ""}</p>
                             {order.trackingNumber && <p className="text-xs text-amber-600">{order.courierName}: {order.trackingNumber}</p>}
                           </div>
                           <div className="text-right space-y-2">
                             <p className="font-bold text-amber-700">{formatRupiah(order.total)}</p>
+                            {disputeForRoom && (
+                              <Link
+                                href={`/pesanan/${order.id}/komplain/${disputeForRoom.id}`}
+                                className="inline-flex h-7 items-center rounded-lg border border-orange-300 bg-orange-50 px-3 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
+                              >
+                                {activeDispute ? "Buka Room Komplain" : "Lihat Riwayat Komplain"}
+                              </Link>
+                            )}
                             {order.status === "PENDING_PAYMENT" && (
                               <p className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-lg">⏳ Menunggu pembayaran buyer</p>
                             )}
@@ -1009,6 +1055,8 @@ export default function StudioPage() {
                             )}
                           </div>
                         </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>

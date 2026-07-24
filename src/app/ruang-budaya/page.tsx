@@ -97,7 +97,7 @@ export default function RuangBudayaPage() {
 
   // Fetch products untuk gallery
   useEffect(() => {
-    fetch("/api/products?limit=40&isCurated=false")
+    fetch("/api/products?limit=40")
       .then(r => r.json())
       .then(d => {
         const products: Product[] = Array.isArray(d.data?.items)
