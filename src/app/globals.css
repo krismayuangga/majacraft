@@ -255,6 +255,18 @@
     display: none !important;
   }
 
+  /* Web bottom nav disembunyikan — digantikan native tab bar */
+  body.in-mobile-app [data-web-bottom-nav],
+  body.rn-app [data-web-bottom-nav] {
+    display: none !important;
+  }
+
+  /* Tombol Masuk/Daftar disembunyikan — auth dikelola native */
+  body.in-mobile-app [data-auth-buttons],
+  body.rn-app [data-auth-buttons] {
+    display: none !important;
+  }
+
   /* Hapus padding bawah main */
   body.in-mobile-app main,
   body.rn-app main {

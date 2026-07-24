@@ -9,65 +9,79 @@ const COOKIE_NAME = process.env.NODE_ENV === "production"
   ? "__Secure-next-auth.session-token"
   : "next-auth.session-token";
 
-/** Sanitasi redirect: harus berupa path relatif yang valid, default ke "/" */
 function safeRedirectPath(raw: string | null): string {
   if (!raw || typeof raw !== "string") return "/";
   const trimmed = raw.trim();
-  // Hanya izinkan path relatif (mulai dengan /)
   if (!trimmed.startsWith("/")) return "/";
-  // Tolak double-slash atau protocol injection
   if (trimmed.startsWith("//")) return "/";
   return trimmed || "/";
 }
 
-/** Selalu redirect — tidak pernah kembalikan JSON error agar WebView tidak menampilkan teks mentah */
-function redirectTo(path: string, req: NextRequest): NextResponse {
+function redirectTo(path: string): NextResponse {
   const base = BASE_URL.replace(/\/$/, "");
-  const safePath = safeRedirectPath(path);
-  return NextResponse.redirect(`${base}${safePath}`, { status: 302 });
+  return NextResponse.redirect(`${base}${safeRedirectPath(path)}`, { status: 302 });
 }
 
 /**
  * GET /api/auth/mobile/webview-token
  *
- * Menukar JWT mobile → NextAuth session cookie agar WebView terotentikasi.
+ * Menukar JWT mobile menjadi NextAuth session cookie agar WebView terotentikasi.
  *
  * Query params:
  *   token    — JWT dari /api/auth/mobile/login atau /google
  *   redirect — Path tujuan setelah login (harus mulai dengan /, default: /)
+ *   debug    — "1" untuk mendapatkan JSON response (testing PowerShell/curl)
  *
- * Selalu redirect (tidak pernah return JSON) sehingga WebView tidak crash.
+ * Jika Accept header bukan text/html ATAU ?debug=1:
+ *   return JSON { verified, userId, redirect, secretSource }
+ *
+ * Untuk WebView: selalu redirect, tidak pernah return JSON error.
  * Token invalid / expired → redirect ke /
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const token        = searchParams.get("token");
   const redirectPath = safeRedirectPath(searchParams.get("redirect"));
+  const debugMode    = searchParams.get("debug") === "1" ||
+                       !req.headers.get("accept")?.includes("text/html");
 
-  // Tidak ada token → redirect ke home
+  const secretSource = process.env.JWT_SECRET
+    ? "JWT_SECRET"
+    : process.env.NEXTAUTH_SECRET
+    ? "NEXTAUTH_SECRET"
+    : "fallback";
+
+  console.log(`[webview-token] debug=${debugMode} secretSource=${secretSource} redirect=${redirectPath}`);
+
   if (!token) {
-    return redirectTo("/", req);
+    console.log("[webview-token] no token provided");
+    if (debugMode) {
+      return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: "Token tidak ada", secretSource });
+    }
+    return redirectTo("/");
   }
 
   try {
-    // 1. Verifikasi JWT
-    const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };
+    const payload = jwt.verify(token, JWT_SECRET) as { sub?: string; email?: string; name?: string };
+    console.log("[webview-token] JWT verified, sub:", payload.sub);
 
     if (!payload?.sub) {
-      return redirectTo("/", req);
+      if (debugMode) return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: "sub missing in payload", secretSource });
+      return redirectTo("/");
     }
 
-    // 2. Ambil data user
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
       select: { id: true, email: true, name: true, status: true },
     });
 
+    console.log("[webview-token] user found:", !!user, "status:", user?.status);
+
     if (!user || user.status === "BANNED" || user.status === "SUSPENDED") {
-      return redirectTo("/", req);
+      if (debugMode) return NextResponse.json({ verified: false, userId: payload.sub, redirect: redirectPath, error: `User not found or blocked (status=${user?.status})`, secretSource });
+      return redirectTo("/");
     }
 
-    // 3. Buat NextAuth session token via jose (kompatibel semua versi next-auth)
     const secretKey = new TextEncoder().encode(JWT_SECRET);
     const now       = Math.floor(Date.now() / 1000);
 
@@ -76,14 +90,26 @@ export async function GET(req: NextRequest) {
       email: user.email,
       name:  user.name,
       iat:   now,
-      exp:   now + 30 * 24 * 60 * 60, // 30 hari
+      exp:   now + 30 * 24 * 60 * 60,
     })
       .setProtectedHeader({ alg: "HS256" })
       .sign(secretKey);
 
-    // 4. Set cookie dan redirect ke tujuan
-    const response = redirectTo(redirectPath, req);
+    console.log("[webview-token] session token created, redirecting to:", redirectPath);
 
+    if (debugMode) {
+      return NextResponse.json({
+        verified: true,
+        userId: user.id,
+        email: user.email,
+        redirect: redirectPath,
+        secretSource,
+        cookieName: COOKIE_NAME,
+        sessionTokenPreview: sessionToken.slice(0, 20) + "...",
+      });
+    }
+
+    const response = redirectTo(redirectPath);
     response.cookies.set(COOKIE_NAME, sessionToken, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
@@ -94,9 +120,11 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch (err) {
-    // JWT expired, invalid signature, dsb → redirect ke home (tidak tampilkan error ke WebView)
-    console.error("[webview-token]", err instanceof Error ? err.message : err);
-    return redirectTo("/", req);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[webview-token] JWT verify failed:", msg, "secretSource:", secretSource);
+    if (debugMode) {
+      return NextResponse.json({ verified: false, userId: null, redirect: redirectPath, error: msg, secretSource });
+    }
+    return redirectTo("/");
   }
 }
-
