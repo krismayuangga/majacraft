@@ -112,27 +112,36 @@ export default function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-1">
-            {/* Chat */}
-            {isLoggedIn && (
-              <Link
-                href="/chat"
-                className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "text-amber-400 hover:text-amber-300 hover:bg-amber-900/30 relative")}
-              >
-                <MessageCircle className="w-5 h-5" />
-              </Link>
-            )}
+            {/* Chat — selalu render agar mobile app bisa intercept tap ke /chat */}
+            <Link
+              href="/chat"
+              data-chat-icon
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "text-amber-400 hover:text-amber-300 hover:bg-amber-900/30 relative",
+                !isLoggedIn && "hidden in-mobile-app:flex"
+              )}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </Link>
 
-            {/* Notifikasi */}
-            {isLoggedIn && (
-              <Link href="/akun/notifikasi" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "text-amber-400 hover:text-amber-300 hover:bg-amber-900/30 relative")}>
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Link>
-            )}
+            {/* Notifikasi — selalu render agar mobile app bisa intercept tap ke /akun/notifikasi */}
+            <Link
+              href="/akun/notifikasi"
+              data-notification-icon
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "text-amber-400 hover:text-amber-300 hover:bg-amber-900/30 relative",
+                !isLoggedIn && "hidden in-mobile-app:flex"
+              )}
+            >
+              <Bell className="w-5 h-5" />
+              {isLoggedIn && unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
 
             {isLoggedIn ? (
               <DropdownMenu>
