@@ -18,7 +18,7 @@ export default function FooterWrapper() {
   const hiddenOnMobile = MOBILE_HIDDEN.some(p => pathname.startsWith(p));
 
   return (
-    <div className={hiddenOnMobile ? "hidden md:block" : ""}>
+    <div data-footer className={hiddenOnMobile ? "hidden md:block" : ""}>
       <Footer />
     </div>
   );

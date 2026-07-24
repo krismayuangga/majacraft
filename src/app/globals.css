@@ -239,6 +239,32 @@
   /* Mobile tap highlight */
   * { -webkit-tap-highlight-color: transparent; }
 
+  /* ─── MajaCraft Mobile App — in-mobile-app class ──────────────────────────
+   * Body mendapat class "in-mobile-app" ketika User-Agent mengandung "MajaCraftApp".
+   * Elemen yang disembunyikan: footer, tombol auth (Masuk/Daftar di navbar).
+   * BottomNav tetap tampil karena dikelola navigation native.
+   * ─────────────────────────────────────────────────────────────────────── */
+  body.in-mobile-app footer,
+  body.in-mobile-app [data-footer],
+  body.in-mobile-app .site-footer {
+    display: none !important;
+  }
+
+  /* Sembunyikan tombol Masuk & Daftar — auth dikelola native */
+  body.in-mobile-app [data-auth-buttons] {
+    display: none !important;
+  }
+
+  /* Hapus padding bawah — bottom nav native menggantikan web BottomNav */
+  body.in-mobile-app main {
+    padding-bottom: 0 !important;
+  }
+
+  /* Web BottomNav juga disembunyikan — digantikan tab bar native */
+  body.in-mobile-app [data-web-bottom-nav] {
+    display: none !important;
+  }
+
   /* TipTap rich text editor prose styles */
   .prose h2 { @apply text-base font-bold text-foreground mt-3 mb-1; }
   .prose h3 { @apply text-sm font-semibold text-foreground mt-2 mb-1; }

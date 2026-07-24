@@ -180,7 +180,7 @@ export default function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-auth-buttons>
                 <Link href="/masuk" className={cn(buttonVariants({ variant: "ghost" }), "text-amber-300 hover:text-amber-100 text-sm")}>
                   Masuk
                 </Link>

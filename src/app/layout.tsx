@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -81,14 +82,43 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Detect MajaCraft mobile app via User-Agent
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent") ?? "";
+  const isMobileApp = userAgent.includes("MajaCraftApp");
+
   return (
     <html lang="id" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <body className="min-h-screen flex flex-col bg-background text-foreground">
+      <body className={`min-h-screen flex flex-col bg-background text-foreground${isMobileApp ? " in-mobile-app" : ""}`}>
+        {/* Inject mobile app context untuk ReactNativeWebView communication */}
+        {isMobileApp && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.__isMobileApp = true;
+                // Jika halaman butuh auth tapi user belum login,
+                // kirim pesan ke native app untuk buka Login modal
+                window.__openNativeLogin = function(redirectPath) {
+                  if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: 'openLogin',
+                      redirect: redirectPath || window.location.pathname
+                    }));
+                  }
+                };
+                // Auto-trigger jika URL mengandung param ?needsLogin=1
+                if (new URLSearchParams(window.location.search).get('needsLogin') === '1') {
+                  window.__openNativeLogin(new URLSearchParams(window.location.search).get('redirect'));
+                }
+              `,
+            }}
+          />
+        )}
         <Providers>
           <Navbar />
           <main className="flex-1 pb-16 md:pb-0">{children}</main>

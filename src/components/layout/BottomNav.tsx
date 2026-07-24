@@ -25,7 +25,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#1C1A14] border-t border-amber-900/40 safe-area-pb">
+    <nav data-web-bottom-nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#1C1A14] border-t border-amber-900/40 safe-area-pb">
       <div className="flex items-stretch h-16">
         {NAV_ITEMS.map((item) => {
           const isActive =
