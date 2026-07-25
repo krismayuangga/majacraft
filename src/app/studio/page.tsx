@@ -549,9 +549,34 @@ function FeeInfoPanel() {
 }
 
 export default function StudioPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [roleCheck, setRoleCheck] = useState<"loading" | "ok" | "forbidden">("loading");
   const [activeTab, setActiveTab] = useState("ringkasan");
+
+  // Upgrade ke Seniman modal
+  const [upgradeModal, setUpgradeModal] = useState(false);
+  const [upgradeForm, setUpgradeForm] = useState({ storeName: "", province: "" });
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
+
+  const handleUpgrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!upgradeForm.storeName || !upgradeForm.province) return setUpgradeError("Nama toko dan provinsi wajib diisi.");
+    setUpgrading(true); setUpgradeError("");
+    const res = await fetch("/api/users/upgrade-seller", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(upgradeForm),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      await update({ role: "SELLER" });
+      setUpgradeModal(false);
+      setRoleCheck("ok"); // langsung masuk Studio tanpa reload
+    } else {
+      setUpgradeError(data.error ?? "Gagal upgrade akun.");
+    }
+    setUpgrading(false);
+  };
 
   // Data state
   const [store, setStore] = useState<Store | null>(null);
@@ -742,8 +767,53 @@ export default function StudioPage() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
       <div className="text-5xl">🎨</div>
       <h1 className="text-2xl font-bold text-foreground">Studio Seniman</h1>
-      <p className="text-muted-foreground max-w-sm">Upgrade akun ke Seniman untuk mulai berjualan.</p>
-      <Link href="/akun" className="btn-gold inline-flex h-11 px-6 rounded-xl font-semibold text-sm items-center">Upgrade ke Seniman</Link>
+      <p className="text-muted-foreground max-w-sm">Upgrade akun ke Seniman untuk mulai berjualan di MajaCraft.</p>
+      <button
+        onClick={() => setUpgradeModal(true)}
+        className="btn-gold inline-flex h-11 px-6 rounded-xl font-semibold text-sm items-center gap-2"
+      >
+        🚀 Upgrade ke Seniman
+      </button>
+
+      {/* Modal Upgrade — langsung di halaman Studio */}
+      {upgradeModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setUpgradeModal(false)}>
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full text-left" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-foreground mb-1">Upgrade ke Seniman</h2>
+            <p className="text-xs text-muted-foreground mb-4">Isi data studio Anda untuk mulai berjualan</p>
+            <form onSubmit={handleUpgrade} className="space-y-3">
+              <div>
+                <label className="text-xs text-amber-500 uppercase tracking-wider">Nama Toko / Studio *</label>
+                <input type="text" placeholder="cth: Kerajinan Batu Jogja"
+                  value={upgradeForm.storeName}
+                  onChange={(e) => setUpgradeForm({ ...upgradeForm, storeName: e.target.value })}
+                  className="w-full h-10 px-3 rounded-lg bg-background border border-border text-foreground text-sm mt-1 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-amber-500 uppercase tracking-wider">Provinsi Asal *</label>
+                <select value={upgradeForm.province}
+                  onChange={(e) => setUpgradeForm({ ...upgradeForm, province: e.target.value })}
+                  className="w-full h-10 px-3 rounded-lg bg-background border border-border text-foreground text-sm mt-1 focus:outline-none focus:border-amber-500 appearance-none">
+                  <option value="">Pilih provinsi...</option>
+                  {["DKI Jakarta","Jawa Barat","Jawa Tengah","Jawa Timur","DI Yogyakarta","Banten","Bali","Sumatera Utara","Sulawesi Selatan","Nusa Tenggara Barat","Nusa Tenggara Timur","Lainnya"].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              {upgradeError && <p className="text-red-400 text-xs">{upgradeError}</p>}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setUpgradeModal(false)}
+                  className="flex-1 h-10 rounded-xl border border-border text-muted-foreground text-sm">Batal</button>
+                <button type="submit" disabled={upgrading}
+                  className="flex-1 h-10 rounded-xl btn-gold font-semibold text-sm flex items-center justify-center gap-1">
+                  {upgrading ? "Memproses..." : "Upgrade Sekarang"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 
