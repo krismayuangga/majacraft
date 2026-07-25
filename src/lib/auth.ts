@@ -51,10 +51,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // 2. Manual update() dari client (e.g. setelah upgrade role)
+      // 2. Manual update() dari client (e.g. setelah upgrade role / ganti foto)
       if (trigger === "update") {
-        if (session?.name) token.name = session.name;
-        if (session?.role) token.role = session.role;
+        if (session?.name)  token.name  = session.name;
+        if (session?.role)  token.role  = session.role;
+        if (session?.image !== undefined) token.image = session.image; // update foto profil
         return token;
       }
 
@@ -77,9 +78,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
-        if (token.name) session.user.name = token.name as string;
+        session.user.id    = token.id as string;
+        (session.user as { role?: string }).role  = token.role as string;
+        if (token.name)  session.user.name  = token.name as string;
+        if (token.image !== undefined) session.user.image = token.image as string | null; // sinkron foto profil
       }
       return session;
     },
