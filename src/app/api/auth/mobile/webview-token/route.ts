@@ -112,17 +112,42 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 4. Redirect + set cookie
-    const response = redirectTo(redirectPath);
-    response.cookies.set(COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path:     "/",
-      maxAge:   30 * 24 * 60 * 60,
-    });
+    // 4. Return HTML page dengan Set-Cookie header
+    //    Fix Android WebView timing bug: 302 redirect tidak selalu menyimpan
+    //    cookie sebelum browser follow redirect. HTML + JS redirect memberi
+    //    waktu browser untuk store cookie terlebih dahulu.
+    const safeRedirectUrl = `${BASE_URL.replace(/\/$/, "")}${safeRedirectPath(redirectPath)}`;
+    const cookieMaxAge    = 30 * 24 * 60 * 60;
+    const cookieSecure    = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    const cookieHeader    = `${COOKIE_NAME}=${sessionToken}; Path=/; HttpOnly${cookieSecure}; SameSite=Lax; Max-Age=${cookieMaxAge}`;
 
-    return response;
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menghubungkan ke MajaCraft...</title>
+  <style>body{margin:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#d97706}</style>
+</head>
+<body>
+  <p>Menghubungkan ke MajaCraft...</p>
+  <script>
+    // Cookie sudah di-set via header, tunggu sebentar lalu redirect
+    setTimeout(function() {
+      window.location.replace(${JSON.stringify(safeRedirectUrl)});
+    }, 100);
+  </script>
+</body>
+</html>`;
+
+    return new NextResponse(html, {
+      status: 200,
+      headers: {
+        "Content-Type":  "text/html; charset=utf-8",
+        "Set-Cookie":    cookieHeader,
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[webview-token] ❌ Error:", msg);
