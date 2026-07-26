@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireAuth();
   if (error) return error;
   const body = await req.json();
-  const { label, name, phone, address, city, province, zip, isDefault } = body;
+  const { label, name, phone, address, city, province, district, village, zip, isDefault } = body;
   if (!name || !address || !city || !province || !zip)
     return err("Semua field wajib diisi");
 
@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
   // Jika ini alamat pertama, jadikan default
   const count = await prisma.address.count({ where: { userId } });
   const addr = await prisma.address.create({
-    data: { userId, label: label ?? "Rumah", name, phone: phone ?? "", address, city, province, zip, isDefault: isDefault || count === 0 },
+    data: {
+      userId, label: label ?? "Rumah", name, phone: phone ?? "",
+      address, city, province,
+      district: district ?? null,
+      village:  village  ?? null,
+      zip, isDefault: isDefault || count === 0,
+    },
   });
   return ok(addr, 201);
 }
