@@ -30,11 +30,13 @@ export async function GET(req: NextRequest) {
   const hasDiscount = searchParams.get("hasDiscount") === "1";
   const dailyRotation = searchParams.get("dailyRotation") === "1";
 
-  const slug     = searchParams.get("slug") ?? undefined;
+  const slug     = searchParams.get("slug")      ?? undefined;
+  const storeSlug = searchParams.get("storeSlug") ?? undefined;
 
   const where = {
     isActive: true,
     ...(slug && { slug }),
+    ...(storeSlug && { store: { slug: storeSlug } }),
     ...(kategori && !slug && { category: { slug: kategori } }),
     ...(search && {
       OR: [
