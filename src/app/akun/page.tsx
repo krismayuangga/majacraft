@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import {
   User, MapPin, ShieldCheck, Bell, Lock, LogOut,
   ChevronRight, Camera, Star, Package, Heart,
-  Store, Settings, Edit3, Check, X, TrendingUp,
+  Store, Settings, Edit3, Check, X, TrendingUp, Trash2, AlertTriangle,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -69,6 +69,40 @@ export default function AkunPage() {
   const [upgradeForm, setUpgradeForm] = useState({ storeName: "", province: "" });
   const [upgrading, setUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState("");
+
+  // Hapus Akun
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<"confirm" | "typing">("confirm");
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteAccount = async () => {
+    if (deleteInput !== "HAPUS AKUN SAYA") {
+      setDeleteError("Ketik ulang teks konfirmasi dengan tepat");
+      return;
+    }
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const res = await fetch("/api/users/me/delete-account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirmText: "HAPUS AKUN SAYA" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await signOut({ callbackUrl: "/" });
+      } else {
+        setDeleteError(data.error ?? "Gagal menghapus akun");
+        setDeleting(false);
+      }
+    } catch {
+      setDeleteError("Terjadi kesalahan. Coba lagi.");
+      setDeleting(false);
+    }
+  };
   const [stats, setStats] = useState({ orders: 0, wishlist: 0 });
 
   useEffect(() => {
@@ -259,6 +293,18 @@ export default function AkunPage() {
           <span className="flex-1 text-sm text-left">Keluar dari Akun</span>
         </button>
 
+        {/* Hapus Akun */}
+        <button
+          onClick={() => { setDeleteModal(true); setDeleteStep("confirm"); setDeleteInput(""); setDeleteError(""); }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:bg-muted/40 transition-colors text-muted-foreground group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center">
+            <Trash2 className="w-4 h-4" />
+          </div>
+          <span className="flex-1 text-sm text-left">Hapus Akun</span>
+          <ChevronRight className="w-4 h-4 opacity-40" />
+        </button>
+
         <p className="text-center text-xs text-muted-foreground pb-4">MajaCraft v1.0</p>
       </div>
 
@@ -295,6 +341,103 @@ export default function AkunPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal Hapus Akun */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteModal(false)}>
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="p-6 border-b border-border">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Hapus Akun Secara Permanen</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Tindakan ini tidak dapat dibatalkan</p>
+                </div>
+              </div>
+            </div>
+
+            {deleteStep === "confirm" ? (
+              <div className="p-6 space-y-4">
+                {/* Deskripsi */}
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Anda akan menghapus akun <span className="text-foreground font-medium">{user?.email}</span> secara permanen dari MajaCraft.
+                </p>
+
+                {/* Yang akan terjadi */}
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
+                  <p className="text-xs font-semibold text-foreground mb-2">Yang akan terjadi:</p>
+                  {[
+                    "Akun Anda tidak dapat diakses kembali",
+                    "Data profil, foto, dan informasi pribadi dihapus",
+                    "Keranjang, wishlist, dan notifikasi dihapus",
+                    "Riwayat pesanan disimpan secara anonim sesuai kebijakan akuntansi",
+                    "Toko dan produk (jika ada) dinonaktifkan dari marketplace",
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground mt-1.5 flex-shrink-0" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Syarat */}
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <span className="text-foreground font-medium">Perhatian:</span> Akun dengan pesanan yang sedang berjalan atau komplain aktif tidak dapat dihapus hingga semua transaksi diselesaikan.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setDeleteModal(false)}
+                    className="flex-1 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors">
+                    Batal
+                  </button>
+                  <button onClick={() => setDeleteStep("typing")}
+                    className="flex-1 h-10 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity">
+                    Lanjutkan
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Untuk mengonfirmasi, ketik teks berikut secara tepat:
+                </p>
+                <div className="px-3 py-2 rounded-lg bg-muted border border-border">
+                  <p className="text-sm font-mono font-semibold text-foreground tracking-wide">HAPUS AKUN SAYA</p>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Ketik di sini..."
+                  value={deleteInput}
+                  onChange={e => { setDeleteInput(e.target.value); setDeleteError(""); }}
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-background text-foreground text-sm font-mono focus:outline-none focus:border-foreground/30 placeholder:text-muted-foreground placeholder:font-sans"
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-sm text-muted-foreground">{deleteError}</p>
+                )}
+                <div className="flex gap-3">
+                  <button onClick={() => setDeleteStep("confirm")} disabled={deleting}
+                    className="flex-1 h-10 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50">
+                    Kembali
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleting || deleteInput !== "HAPUS AKUN SAYA"}
+                    className="flex-1 h-10 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+                  >
+                    {deleting ? "Menghapus..." : "Hapus Akun"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
