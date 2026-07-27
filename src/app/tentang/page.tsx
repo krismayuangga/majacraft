@@ -12,7 +12,7 @@ const values = [
 
 const roadmap = [
   { phase: "Q1–Q2 2026", title: "Fondasi", done: true, items: ["Peluncuran Platform", "Digital Museum Nusantara", "Pembangunan Komunitas", "Kemitraan Seniman Pertama"] },
-  { phase: "Q3–Q4 2026", title: "Marketplace", done: false, current: true, items: ["MAJA Marketplace Beta", "Sertifikat Keaslian Fisik-Digital", "Sistem Escrow Aman", "Onboarding 500+ Seniman"] },
+  { phase: "Q3–Q4 2026", title: "Marketplace", done: false, current: true, items: ["MAJA Marketplace Beta", "Sertifikat Phygital Fisik-Digital", "Sistem Escrow Aman", "Onboarding 500+ Seniman"] },
   { phase: "Q1–Q2 2027", title: "Ekspansi", done: false, items: ["Full Marketplace Launch", "Ekspor ke Kolektor Internasional", "Pameran Virtual Skala Besar", "Integrasi Logistik Nasional"] },
   { phase: "H2 2027+", title: "Ekosistem", done: false, items: ["Galeri Imersif Digital", "Standar Sertifikasi Seni Nasional", "Mitra Institusi Budaya", "Pelestarian Warisan Permanen"] },
 ];
@@ -70,7 +70,7 @@ export default function TentangMajaCraft() {
           <ul className="space-y-2.5">
             {[
               "Menghilangkan hambatan teknis agar pengrajin UMKM bisa berjualan langsung",
-              "Mendigitalisasi warisan budaya melalui Sertifikat Keaslian otomatis",
+              "Mendigitalisasi warisan budaya melalui Sertifikat Phygital otomatis",
               "Mendukung ekosistem seni yang adil dan berkelanjutan bagi seniman lokal",
             ].map((m, i) => (
               <li key={i} className="flex items-start gap-2.5">

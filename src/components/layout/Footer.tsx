@@ -61,7 +61,7 @@ export default function Footer() {
               {[
                 ["Cara Berbelanja", "/bantuan/belanja"],
                 ["Cara Berjualan", "/bantuan/jual"],
-                ["Jaminan Keaslian", "/jaminan"],
+                ["Sertifikat Phygital", "/jaminan"],
                 ["Ruang Budaya", "/ruang-budaya"],
                 ["Program Seniman", "/program-seniman"],
                 ["Pusat Bantuan", "/bantuan"],

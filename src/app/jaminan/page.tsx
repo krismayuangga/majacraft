@@ -139,7 +139,7 @@ export default function JaminanKeaslian() {
       {/* CTA */}
       <div className="text-center p-8 rounded-2xl bg-amber-900/10 border border-amber-800/20">
         <p className="text-foreground font-semibold mb-2">Jelajahi karya bersertifikat</p>
-        <p className="text-sm text-muted-foreground mb-4">Cari karya dengan badge &quot;Verified Phygital&quot; untuk jaminan keaslian tertinggi</p>
+        <p className="text-sm text-muted-foreground mb-4">Cari karya dengan badge &quot;Verified Phygital&quot; untuk karya bersertifikat kepemilikan digital</p>
         <Link href="/produk" className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-700 hover:bg-amber-600 text-white rounded-xl text-sm font-medium transition-colors">
           Lihat Karya Terverifikasi <ChevronRight className="w-4 h-4" />
         </Link>

@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "MajaCraft — Marketplace Seni Nusantara",
-    description: "Temukan karya seni autentik dari seniman lokal Indonesia. Jaminan keaslian, pembayaran aman, gratis ongkir.",
+    description: "Temukan karya seni autentik dari seniman lokal Indonesia. Sertifikat Phygital, pembayaran aman, gratis ongkir.",
     url: "https://majacraft.id",
     siteName: "MajaCraft",
     type: "website",

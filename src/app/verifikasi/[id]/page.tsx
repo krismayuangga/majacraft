@@ -473,7 +473,7 @@ export default async function VerifikasiPage({
           <div className="no-print pt-4 border-t border-border flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
               <Link href="/" className="hover:text-foreground">Beranda</Link>
-              <Link href="/jaminan" className="hover:text-foreground">Jaminan Keaslian</Link>
+              <Link href="/jaminan" className="hover:text-foreground">Sertifikat Phygital</Link>
               <Link href="/bantuan" className="hover:text-foreground">Bantuan</Link>
               <Link href="/syarat" className="hover:text-foreground">Syarat & Ketentuan</Link>
               <Link href="/privasi" className="hover:text-foreground">Privasi</Link>
