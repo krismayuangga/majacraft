@@ -13,6 +13,7 @@ export type NotifType =
   | "dispute_admin_assigned"
   | "dispute_resolved"
   | "dispute_cancelled"
+  | "dispute_update"
   | "system";
 
 export async function createNotification({
