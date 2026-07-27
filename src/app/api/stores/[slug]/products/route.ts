@@ -19,7 +19,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   const page     = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
   const limit    = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
-  const kategori = searchParams.get("kategori") ?? undefined;
+  // Support both "kategori" (web) and "category" (mobile) param names
+  const kategori = searchParams.get("kategori") ?? searchParams.get("category") ?? undefined;
   const search   = searchParams.get("search")   ?? undefined;
   const sort     = searchParams.get("sort")      ?? "terbaru";
 
@@ -52,22 +53,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     rating:       { rating:     "desc" as const },
   }[sort] ?? { createdAt: "desc" as const };
 
-  const [items, total] = await Promise.all([
+  const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       orderBy,
       skip:  (page - 1) * limit,
       take:  limit,
-      include: {
-        images:   { where: { isPrimary: true }, take: 1 },
+      select: {
+        id:           true,
+        name:         true,
+        slug:         true,
+        price:        true,
+        originalPrice: true,
+        stock:        true,
+        rating:       true,
+        reviewCount:  true,
+        soldCount:    true,
+        hasCertificate: true,
+        isFeatured:   true,
+        images:   { where: { isPrimary: true }, select: { url: true }, take: 1 },
         category: { select: { name: true, slug: true } },
+        store:    { select: { name: true, slug: true, province: true, isVerified: true, rating: true, logoUrl: true, totalSold: true } },
       },
     }),
     prisma.product.count({ where }),
   ]);
 
   return ok({
-    items,
+    products,
     pagination: {
       page,
       limit,
