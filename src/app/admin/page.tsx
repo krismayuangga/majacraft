@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Package, ShoppingBag, Store,
   Settings, Shield, CheckCircle2, XCircle, Search, Ban,
   DollarSign, Loader2, UserCheck, AlertCircle, RefreshCw, BadgeCheck, Trash2,
-  BookOpen, Plus, Edit, Eye, Calendar, ChevronDown,
+  BookOpen, Plus, Edit, Eye, Calendar, ChevronDown, Megaphone, Send,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/data";
 import { useModernDialog } from "@/components/ui/modern-dialog";
@@ -77,6 +77,7 @@ const MENU = [
   { id:"pesanan", label:"Pesanan", icon:ShoppingBag },
   { id:"toko", label:"Toko", icon:Store },
   { id:"keuangan", label:"Keuangan", icon:DollarSign },
+  { id:"pengumuman", label:"Pengumuman", icon:Megaphone },
   { id:"ruang-budaya", label:"Ruang Budaya", icon:BookOpen },
   { id:"pengaturan", label:"Pengaturan", icon:Settings },
 ];
@@ -174,6 +175,80 @@ function AdminSettings() {
           {saving ? "Menyimpan..." : "Simpan Pengaturan"}
         </button>
         {saved && <span className="text-green-500 text-sm">✓ Tersimpan</span>}
+      </div>
+    </div>
+  );
+}
+
+function AdminAnnouncements() {
+  const [title,   setTitle]   = React.useState("");
+  const [message, setMessage] = React.useState("");
+  const [target,  setTarget]  = React.useState<"all"|"buyer"|"seller">("all");
+  const [sending, setSending] = React.useState(false);
+  const [result,  setResult]  = React.useState<{sent:number;title:string}|null>(null);
+  const [error,   setError]   = React.useState("");
+
+  const send = async () => {
+    if (!title.trim() || !message.trim()) { setError("Judul dan isi pesan wajib diisi"); return; }
+    setSending(true); setError(""); setResult(null);
+    const res = await fetch("/api/admin/announcements", {
+      method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+      body: JSON.stringify({ title: title.trim(), message: message.trim(), target }),
+    });
+    const d = await res.json();
+    setSending(false);
+    if (res.ok) { setResult(d.data); setTitle(""); setMessage(""); }
+    else setError(d.error ?? "Gagal mengirim pengumuman");
+  };
+
+  const targetLabel = { all:"Semua User", buyer:"Hanya Pembeli", seller:"Hanya Seniman" };
+
+  return (
+    <div className="space-y-5 max-w-xl">
+      <div>
+        <h2 className="font-semibold text-foreground mb-1">Kirim Pengumuman</h2>
+        <p className="text-xs text-muted-foreground">Pengumuman akan dikirim sebagai notifikasi in-app dan push notification ke perangkat mobile.</p>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">Judul * <span className="text-muted-foreground/60">({title.length}/100)</span></label>
+          <input type="text" maxLength={100} placeholder="cth: Pemeliharaan Sistem Terjadwal"
+            value={title} onChange={e => setTitle(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:border-amber-500 placeholder:text-muted-foreground" />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">Isi Pesan * <span className="text-muted-foreground/60">({message.length}/500)</span></label>
+          <textarea maxLength={500} rows={4} placeholder="Tulis isi pengumuman di sini..."
+            value={message} onChange={e => setMessage(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:border-amber-500 resize-none placeholder:text-muted-foreground" />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground block mb-1">Target Penerima</label>
+          <select value={target} onChange={e => setTarget(e.target.value as "all"|"buyer"|"seller")}
+            className="h-10 px-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:border-amber-500 appearance-none w-full">
+            <option value="all">Semua User</option>
+            <option value="buyer">Hanya Pembeli (Buyer)</option>
+            <option value="seller">Hanya Seniman (Seller)</option>
+          </select>
+        </div>
+
+        {error && <p className="text-red-400 text-xs">{error}</p>}
+
+        {result && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-green-900/10 border border-green-800/30 text-green-400 text-sm">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            Berhasil dikirim ke <strong>{result.sent} user</strong>
+          </div>
+        )}
+
+        <button onClick={send} disabled={sending || !title.trim() || !message.trim()}
+          className="flex items-center gap-2 h-10 px-5 rounded-xl bg-amber-700 hover:bg-amber-600 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {sending ? "Mengirim..." : `Kirim ke ${targetLabel[target]}`}
+        </button>
       </div>
     </div>
   );
@@ -913,6 +988,11 @@ export default function AdminPage() {
                 </div>
                 <AdminWithdrawals />
               </div>
+            )}
+
+            {/* PENGUMUMAN */}
+            {tab==="pengumuman"&&(
+              <AdminAnnouncements />
             )}
 
             {/* RUANG BUDAYA */}
