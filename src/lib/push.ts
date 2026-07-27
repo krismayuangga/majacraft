@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { sendFCM } from "@/lib/fcm";
 
 type PushPayload = {
   to: string;
@@ -50,8 +51,18 @@ export async function sendPushToUser(
 
   if (devices.length === 0) return;
 
-  const validDevices = devices.filter((d) => d.token.startsWith("ExponentPushToken["));
-  await sendExpoPush(validDevices.map((d) => ({ to: d.token, title, body, data })));
+  // Expo tokens (React Native)
+  const expoDevices = devices.filter((d) => d.token.startsWith("ExponentPushToken["));
+  if (expoDevices.length > 0) {
+    await sendExpoPush(expoDevices.map((d) => ({ to: d.token, title, body, data })));
+  }
+
+  // FCM tokens (Flutter)
+  const fcmDevices = devices.filter((d) => !d.token.startsWith("ExponentPushToken["));
+  const stringData = data
+    ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? "")]))
+    : undefined;
+  await Promise.all(fcmDevices.map((d) => sendFCM({ token: d.token, title, body, data: stringData }).catch(() => {})));
 }
 
 export async function sendPushToUsers(
@@ -69,6 +80,18 @@ export async function sendPushToUsers(
 
   if (devices.length === 0) return;
 
-  const tokens = [...new Set(devices.map((d) => d.token))].filter((t) => t.startsWith("ExponentPushToken["));
-  await sendExpoPush(tokens.map((to) => ({ to, title, body, data })));
+  const allTokens = [...new Set(devices.map((d) => d.token))];
+
+  // Expo tokens
+  const expoTokens = allTokens.filter((t) => t.startsWith("ExponentPushToken["));
+  if (expoTokens.length > 0) {
+    await sendExpoPush(expoTokens.map((to) => ({ to, title, body, data })));
+  }
+
+  // FCM tokens
+  const fcmTokens = allTokens.filter((t) => !t.startsWith("ExponentPushToken["));
+  const stringData = data
+    ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? "")]))
+    : undefined;
+  await Promise.all(fcmTokens.map((t) => sendFCM({ token: t, title, body, data: stringData }).catch(() => {})));
 }
