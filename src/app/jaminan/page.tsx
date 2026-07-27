@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BadgeCheck, Fingerprint, Link2, ShieldCheck, Award, Eye, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { BadgeCheck, Fingerprint, Link2, ShieldCheck, Award, Eye, ChevronRight, AlertTriangle } from "lucide-react";
 
 const features = [
   {
@@ -15,18 +16,18 @@ const features = [
   {
     icon: Eye,
     title: "Verifikasi Publik",
-    desc: "Siapapun dapat memverifikasi keaslian karya hanya dengan scan QR code atau memasukkan ID sertifikat. Tidak perlu akun atau keahlian teknis.",
+    desc: "Siapapun dapat memverifikasi kepemilikan karya hanya dengan scan QR code atau memasukkan ID sertifikat. Tidak perlu akun atau keahlian teknis.",
   },
   {
     icon: Award,
-    title: "Nilai Investasi",
-    desc: "Karya dengan sertifikat NFT memiliki nilai koleksi yang lebih tinggi. Kepemilikan terdokumentasi meningkatkan nilai jual kembali karya seni Anda.",
+    title: "Nilai Koleksi",
+    desc: "Karya dengan sertifikat kepemilikan memiliki nilai koleksi yang lebih tinggi. Kepemilikan terdokumentasi meningkatkan kepercayaan dan nilai karya seni Anda.",
   },
 ];
 
 const howItWorks = [
   { step: "1", title: "Seniman Upload Karya", desc: "Seniman mengunggah foto dan informasi karya lengkap ke MajaCraft." },
-  { step: "2", title: "Verifikasi Tim Kurator", desc: "Tim kurator MajaCraft memverifikasi keaslian karya sebelum sertifikat diterbitkan." },
+  { step: "2", title: "Verifikasi Tim Maja", desc: "Tim MajaCraft memverifikasi dan menilai karya sebelum sertifikat diterbitkan. Sertifikat hanya diberikan untuk karya unik dan tidak diproduksi massal." },
   { step: "3", title: "NFT Diterbitkan", desc: "Smart contract menerbitkan NFT berisi metadata karya, foto, dan identitas pembuat." },
   { step: "4", title: "Sertifikat Terhubung ke Produk", desc: "Pembeli menerima NFT sertifikat bersama produk fisik. Scan QR untuk verifikasi kapanpun." },
 ];
@@ -39,9 +40,9 @@ export default function JaminanKeaslian() {
         <div className="inline-flex items-center gap-2 text-xs text-amber-600 border border-amber-700/30 px-3 py-1 rounded-full mb-4">
           <BadgeCheck className="w-3 h-3" /> Phygital NFT
         </div>
-        <h1 className="text-3xl font-bold text-foreground mb-3">Jaminan Keaslian MajaCraft</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-3">Sertifikat Kepemilikan MajaCraft</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          MajaCraft adalah marketplace pertama di Indonesia yang menggunakan teknologi blockchain untuk membuktikan keaslian setiap karya seni dan kerajinan tradisional.
+          MajaCraft menggunakan teknologi blockchain untuk mencatat dan membuktikan kepemilikan setiap karya seni dan kerajinan tradisional secara permanen dan transparan.
         </p>
       </div>
 
@@ -54,7 +55,7 @@ export default function JaminanKeaslian() {
           <div>
             <h2 className="font-bold text-foreground mb-2">Apa itu Phygital NFT?</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Phygital</strong> adalah gabungan dari <em>physical</em> (fisik) dan <em>digital</em>. Setiap karya di MajaCraft dapat dilengkapi NFT (Non-Fungible Token) sebagai sertifikat keaslian digital yang terhubung ke produk fisik. Sertifikat ini tersimpan permanen di blockchain — tidak bisa dipalsukan, dihapus, atau diubah.
+              <strong className="text-foreground">Phygital</strong> adalah gabungan dari <em>physical</em> (fisik) dan <em>digital</em>. Setiap karya eksklusif di MajaCraft dapat dilengkapi NFT (Non-Fungible Token) sebagai sertifikat kepemilikan digital yang terhubung ke produk fisik. Sertifikat ini tersimpan permanen di blockchain — tidak bisa dipalsukan, dihapus, atau diubah. Kepemilikan berpindah otomatis ke pembeli saat karya terjual.
             </p>
           </div>
         </div>
@@ -95,12 +96,44 @@ export default function JaminanKeaslian() {
 
       {/* Verify */}
       <div className="p-6 rounded-2xl border border-border bg-card mb-8">
-        <h2 className="font-bold text-foreground mb-3">Cara Verifikasi Keaslian</h2>
+        <h2 className="font-bold text-foreground mb-3">Cara Verifikasi Kepemilikan</h2>
         <ol className="space-y-2 text-sm text-muted-foreground">
           <li className="flex items-start gap-2"><ChevronRight className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />Scan QR code pada kartu sertifikat yang disertakan bersama produk</li>
           <li className="flex items-start gap-2"><ChevronRight className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />Atau masukkan ID sertifikat di halaman verifikasi MajaCraft</li>
           <li className="flex items-start gap-2"><ChevronRight className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />Sistem akan menampilkan data lengkap karya langsung dari blockchain</li>
         </ol>
+      </div>
+
+      {/* Contoh Sertifikat */}
+      <div className="mb-8">
+        <h2 className="text-lg font-bold text-foreground mb-3">Contoh Sertifikat Kepemilikan Digital</h2>
+        <div className="rounded-2xl border border-amber-800/20 overflow-hidden bg-card">
+          <Image
+            src="/images/contoh-sertifikat.png"
+            alt="Contoh Sertifikat Kepemilikan Digital MajaCraft"
+            width={900}
+            height={600}
+            className="w-full h-auto object-contain"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2 text-center">
+          Tampilan sertifikat kepemilikan digital yang dapat diverifikasi melalui halaman verifikasi MajaCraft
+        </p>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="p-5 rounded-2xl border border-amber-800/30 bg-amber-900/5 mb-8">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Bukan Instrumen Investasi</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Sertifikat Phygital MajaCraft <strong className="text-foreground">bukan</strong> produk investasi atau instrumen keuangan.
+              Nilainya tidak dijamin dan tidak dimaksudkan untuk diperjualbelikan sebagai aset digital.
+              Sertifikat ini semata-mata berfungsi sebagai bukti kepemilikan karya seni/kerajinan yang terhubung ke produk fisik.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* CTA */}
