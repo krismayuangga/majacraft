@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       take: limit,
       include: {
         images: { where: { isPrimary: true }, take: 1 },
-        store: { select: { name: true, province: true, isVerified: true, rating: true } },
+        store: { select: { name: true, slug: true, province: true, isVerified: true, rating: true, logoUrl: true, totalSold: true } },
         category: { select: { name: true, slug: true } },
       },
     }),
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         images: { where: { isPrimary: true }, take: 1 },
-        store: { select: { name: true, province: true, isVerified: true, rating: true } },
+        store: { select: { name: true, slug: true, province: true, isVerified: true, rating: true, logoUrl: true, totalSold: true } },
         category: { select: { name: true, slug: true } },
       },
     });
