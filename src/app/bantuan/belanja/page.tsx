@@ -60,8 +60,8 @@ export default function CaraBerbelanja() {
         {steps.map((step, i) => (
           <div key={i} className="flex gap-5 p-5 rounded-2xl border border-border bg-card">
             <div className="flex-shrink-0">
-              <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-800/30 flex items-center justify-center">
-                <step.icon className="w-5 h-5 text-amber-400" />
+              <div className="w-12 h-12 rounded-xl bg-amber-800/20 border border-amber-700/30 flex items-center justify-center">
+                <step.icon className="w-5 h-5 text-amber-700" />
               </div>
             </div>
             <div className="flex-1">

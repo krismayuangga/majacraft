@@ -50,7 +50,7 @@ export default function JaminanKeaslian() {
       <div className="p-6 rounded-2xl bg-amber-900/10 border border-amber-800/20 mb-10">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-800/30 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-6 h-6 text-amber-400" />
+            <ShieldCheck className="w-6 h-6 text-amber-700" />
           </div>
           <div>
             <h2 className="font-bold text-foreground mb-2">Apa itu Phygital NFT?</h2>
@@ -66,8 +66,8 @@ export default function JaminanKeaslian() {
         {features.map((f, i) => (
           <div key={i} className="p-5 rounded-xl border border-border bg-card">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-900/30 border border-amber-800/30 flex items-center justify-center">
-                <f.icon className="w-4 h-4 text-amber-400" />
+              <div className="w-9 h-9 rounded-lg bg-amber-800/20 border border-amber-700/30 flex items-center justify-center">
+                <f.icon className="w-4 h-4 text-amber-700" />
               </div>
               <h3 className="font-semibold text-foreground text-sm">{f.title}</h3>
             </div>

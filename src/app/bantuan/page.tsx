@@ -50,8 +50,8 @@ export default function PusatBantuan() {
         {categories.map((cat, i) => (
           <Link key={i} href={cat.href} className="group p-5 rounded-xl border border-border bg-card hover:border-amber-700/40 hover:bg-amber-900/5 transition-all">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-lg bg-amber-900/30 border border-amber-800/30 flex items-center justify-center group-hover:bg-amber-900/50 transition-colors">
-                <cat.icon className="w-4 h-4 text-amber-400" />
+              <div className="w-9 h-9 rounded-lg bg-amber-800/20 border border-amber-700/30 flex items-center justify-center group-hover:bg-amber-800/30 transition-colors">
+                <cat.icon className="w-4 h-4 text-amber-700" />
               </div>
               <h3 className="font-semibold text-foreground text-sm">{cat.title}</h3>
             </div>

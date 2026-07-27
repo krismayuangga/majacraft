@@ -106,7 +106,7 @@ export default async function CaraBerjualan() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
         {benefits.map((b, i) => (
           <div key={i} className="p-4 rounded-xl border border-amber-800/20 bg-amber-900/10 text-center">
-            <p className="text-sm font-semibold text-amber-400 mb-1">{b.title}</p>
+            <p className="text-sm font-semibold text-amber-700 mb-1">{b.title}</p>
             <p className="text-xs text-muted-foreground leading-relaxed">{b.desc}</p>
           </div>
         ))}
@@ -117,8 +117,8 @@ export default async function CaraBerjualan() {
         {steps.map((step, i) => (
           <div key={i} className="flex gap-4 p-5 rounded-2xl border border-border bg-card hover:border-amber-800/40 transition-colors">
             <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-900/30 border border-amber-800/30 flex items-center justify-center">
-                <step.icon className="w-5 h-5 text-amber-500" />
+              <div className="w-10 h-10 rounded-xl bg-amber-800/20 border border-amber-700/30 flex items-center justify-center">
+                <step.icon className="w-5 h-5 text-amber-700" />
               </div>
               <span className="text-[10px] font-bold text-amber-700/70">{i + 1}</span>
             </div>

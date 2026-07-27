@@ -92,7 +92,7 @@ export default async function ProgramSeniman() {
           {benefits.map((b, i) => (
             <div key={i} className="flex gap-3 p-4 rounded-xl border border-border bg-card">
               <div className="w-9 h-9 rounded-lg bg-amber-900/30 border border-amber-800/30 flex items-center justify-center flex-shrink-0">
-                <b.icon className="w-4 h-4 text-amber-500" />
+                <b.icon className="w-4 h-4 text-amber-700" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground mb-0.5">{b.title}</p>
